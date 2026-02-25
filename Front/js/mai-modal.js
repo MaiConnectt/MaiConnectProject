@@ -1,6 +1,7 @@
 /**
  * MaiModal - Project-wide Modal Controller
  * Provides confirm, alert, and prompt functionality with a premium look.
+ * hola
  */
 const MaiModal = {
     elements: {},
