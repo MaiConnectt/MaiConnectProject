@@ -154,7 +154,7 @@ foreach ($orders_status as $row) {
                     <div class="stat-header">
                         <div>
                             <div class="stat-value">$
-                                <?php echo number_format($stats['total_sales'], 0, ',', '.'); ?>
+                                <?php echo number_format($stats['total_sales'] ?? 0, 0, ',', '.'); ?>
                             </div>
                             <div class="stat-label">Ventas Totales</div>
                         </div>
@@ -166,7 +166,7 @@ foreach ($orders_status as $row) {
                     <div class="stat-header">
                         <div>
                             <div class="stat-value">
-                                <?php echo number_format($stats['total_orders']); ?>
+                                <?php echo number_format($stats['total_orders'] ?? 0); ?>
                             </div>
                             <div class="stat-label">Pedidos Totales</div>
                         </div>
@@ -178,7 +178,7 @@ foreach ($orders_status as $row) {
                     <div class="stat-header">
                         <div>
                             <div class="stat-value">
-                                <?php echo number_format($stats['total_items']); ?>
+                                <?php echo number_format($stats['total_items'] ?? 0); ?>
                             </div>
                             <div class="stat-label">Productos Vendidos</div>
                         </div>

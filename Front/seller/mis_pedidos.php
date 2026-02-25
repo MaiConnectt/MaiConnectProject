@@ -278,7 +278,7 @@ function getPaymentBadge($status)
             <span onclick="closeModal()"
                 style="position:absolute; right:1.5rem; top:1rem; cursor:pointer; font-size:1.5rem;">&times;</span>
             <h2 style="margin-bottom:1rem; font-family: 'Playfair Display', serif;">Subir Comprobante</h2>
-            <form action="../pedidos_acciones.php" method="POST" enctype="multipart/form-data">
+            <form action="acciones.php" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="subir_pago">
                 <input type="hidden" name="id_pedido" id="modal_id_pedido">
                 <div style="margin-bottom:1rem;">
@@ -357,7 +357,7 @@ function getPaymentBadge($status)
                 onConfirm: () => {
                     const form = document.createElement('form');
                     form.method = 'POST';
-                    form.action = '../pedidos_acciones.php';
+                    form.action = 'acciones.php';
 
                     const inputAction = document.createElement('input');
                     inputAction.type = 'hidden';

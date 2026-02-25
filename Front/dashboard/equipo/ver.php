@@ -332,12 +332,6 @@ function getStatusBadge($status)
                         </div>
                     </div>
                     <div class="profile-actions">
-                        <?php if (!empty($seller['telefono'])): ?>
-                            <a href="https://wa.me/<?php echo preg_replace('/[^0-9]/', '', $seller['telefono']); ?>"
-                                target="_blank" class="btn-profile-action whatsapp">
-                                <i class="fab fa-whatsapp"></i> WhatsApp
-                            </a>
-                        <?php endif; ?>
                         <a href="editar.php?id=<?php echo $seller['id_miembro']; ?>" class="btn-profile-action edit">
                             <i class="fas fa-edit"></i> Editar
                         </a>
@@ -355,21 +349,21 @@ function getStatusBadge($status)
                     <div class="stat-card-large">
                         <i class="fas fa-dollar-sign"></i>
                         <span class="value">$
-                            <?php echo number_format($seller['total_sales'], 0, ',', '.'); ?>
+                            <?php echo number_format($seller['total_sales'] ?? 0, 0, ',', '.'); ?>
                         </span>
                         <span class="label">Ventas Totales</span>
                     </div>
                     <div class="stat-card-large">
                         <i class="fas fa-wallet"></i>
                         <span class="value">$
-                            <?php echo number_format($seller['total_commissions_earned'], 0, ',', '.'); ?>
+                            <?php echo number_format($seller['total_commissions_earned'] ?? 0, 0, ',', '.'); ?>
                         </span>
                         <span class="label">Comisiones Generadas</span>
                     </div>
                     <div class="stat-card-large" style="border-bottom: 4px solid var(--primary-color);">
                         <i class="fas fa-clock"></i>
                         <span class="value" style="color: var(--primary-color);">$
-                            <?php echo number_format($seller['balance_pending'], 0, ',', '.'); ?>
+                            <?php echo number_format($seller['balance_pending'] ?? 0, 0, ',', '.'); ?>
                         </span>
                         <span class="label">Saldo Pendiente</span>
                     </div>
@@ -414,7 +408,7 @@ function getStatusBadge($status)
                                                 </div>
                                             </td>
                                             <td style="font-weight: 700;">$
-                                                <?php echo number_format($order['monto_total'], 0, ',', '.'); ?>
+                                                <?php echo number_format($order['monto_total'] ?? 0, 0, ',', '.'); ?>
                                             </td>
                                             <td>
                                                 <?php echo getStatusBadge($order['estado']); ?>

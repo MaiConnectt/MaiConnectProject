@@ -141,6 +141,13 @@ if (!$seller) {
                     </div>
 
                     <div class="form-group">
+                        <label class="form-label">Teléfono / WhatsApp</label>
+                        <input type="tel" name="telefono" class="form-control" required maxlength="10" minlength="10"
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                            value="<?php echo htmlspecialchars($seller['telefono'] ?? ''); ?>">
+                    </div>
+
+                    <div class="form-group">
                         <label class="form-label">Porcentaje de Comisión (%)</label>
                         <input type="number" name="comision" class="form-control" step="0.1"
                             value="<?php echo floatval($seller['porcentaje_comision']); ?>" min="0" max="100">

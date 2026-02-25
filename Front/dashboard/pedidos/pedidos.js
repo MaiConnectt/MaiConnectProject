@@ -158,12 +158,13 @@ function updateOrderStatus(orderId, newStatus, selectElement, notaCancelacion) {
 
 // ===== DELETE ORDER =====
 function deleteOrder(orderId) {
-    fetch('eliminar.php', {
+    fetch('acciones.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
+            action: 'delete',
             order_id: orderId
         })
     })

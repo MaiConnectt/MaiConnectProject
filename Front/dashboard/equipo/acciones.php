@@ -14,15 +14,16 @@ $action = $_POST['action'] ?? '';
 try {
     switch ($action) {
         case 'create':
-            $nombre = trim($_POST['nombre'] ?? '');
-            $apellido = trim($_POST['apellido'] ?? '');
-            $email = trim($_POST['email'] ?? '');
-            $password = $_POST['password'] ?? '';
             $comision = floatval($_POST['comision'] ?? 5.0);
-            $estado = $_POST['estado'] ?? 'activo';
+            $estado = $_POST['status'] ?? ($_POST['estado'] ?? 'activo');
+            $telefono = trim($_POST['telefono'] ?? '');
 
-            if (empty($nombre) || empty($email) || empty($password)) {
-                throw new Exception("Nombre, Email y Contraseña son obligatorios");
+            if (empty($nombre) || empty($email) || empty($password) || empty($telefono)) {
+                throw new Exception("Nombre, Email, Teléfono y Contraseña son obligatorios");
+            }
+
+            if (!preg_match('/^[0-9]{10}$/', $telefono)) {
+                throw new Exception("El teléfono debe tener exactamente 10 dígitos numéricos");
             }
 
             $pdo->beginTransaction();
@@ -43,8 +44,8 @@ try {
             $stmt->execute([$next_user, $nombre, $apellido, $email, password_hash($password, PASSWORD_BCRYPT)]);
 
             // Insert into tbl_miembro
-            $stmt = $pdo->prepare("INSERT INTO tbl_miembro (id_miembro, id_usuario, porcentaje_comision, estado, fecha_contratacion) VALUES (?, ?, ?, ?, CURRENT_DATE)");
-            $stmt->execute([$next_member, $next_user, $comision, $estado]);
+            $stmt = $pdo->prepare("INSERT INTO tbl_miembro (id_miembro, id_usuario, porcentaje_comision, estado, telefono, fecha_contratacion) VALUES (?, ?, ?, ?, ?, CURRENT_DATE)");
+            $stmt->execute([$next_member, $next_user, $comision, $estado, $telefono]);
 
             $pdo->commit();
             echo json_encode(['success' => true, 'message' => 'Vendedor creado exitosamente']);
@@ -57,9 +58,14 @@ try {
             $email = trim($_POST['email'] ?? '');
             $comision = floatval($_POST['comision'] ?? 0);
             $estado = $_POST['estado'] ?? 'activo';
+            $telefono = trim($_POST['telefono'] ?? '');
 
-            if (!$id_miembro || empty($nombre) || empty($email)) {
-                throw new Exception("Datos incompletos");
+            if (!$id_miembro || empty($nombre) || empty($email) || empty($telefono)) {
+                throw new Exception("Datos incompletos (Nombre, Email y Teléfono son obligatorios)");
+            }
+
+            if (!preg_match('/^[0-9]{10}$/', $telefono)) {
+                throw new Exception("El teléfono debe tener exactamente 10 dígitos numéricos");
             }
 
             $pdo->beginTransaction();
@@ -77,8 +83,8 @@ try {
             $stmt->execute([$nombre, $apellido, $email, $id_usuario]);
 
             // Update tbl_miembro
-            $stmt = $pdo->prepare("UPDATE tbl_miembro SET porcentaje_comision = ?, estado = ? WHERE id_miembro = ?");
-            $stmt->execute([$comision, $estado, $id_miembro]);
+            $stmt = $pdo->prepare("UPDATE tbl_miembro SET porcentaje_comision = ?, estado = ?, telefono = ? WHERE id_miembro = ?");
+            $stmt->execute([$comision, $estado, $telefono, $id_miembro]);
 
             $pdo->commit();
             echo json_encode(['success' => true, 'message' => 'Vendedor actualizado exitosamente']);

@@ -1,1 +1,0 @@
-ALTER TABLE tbl_order ADD COLUMN IF NOT EXISTS payment_proof VARCHAR(255);

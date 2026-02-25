@@ -184,10 +184,10 @@ try {
                                                 <?php echo $order['porcentaje_comision']; ?>%
                                             </div>
                                         </td>
-                                        <td>$<?php echo number_format($order['total_pedido'], 0, ',', '.'); ?></td>
+                                        <td>$<?php echo number_format($order['total_pedido'] ?? 0, 0, ',', '.'); ?></td>
                                         <td>
                                             <span style="font-weight: 700; color: var(--danger);">
-                                                $<?php echo number_format($order['monto_comision'], 0, ',', '.'); ?>
+                                                $<?php echo number_format($order['monto_comision'] ?? 0, 0, ',', '.'); ?>
                                             </span>
                                         </td>
                                         <td>
@@ -233,7 +233,7 @@ try {
                                         <td><?php echo htmlspecialchars($pay['nombre'] . ' ' . $pay['apellido']); ?></td>
                                         <td>
                                             <span style="font-weight: 700; color: var(--success);">
-                                                $<?php echo number_format($pay['monto_comision'], 0, ',', '.'); ?>
+                                                $<?php echo number_format($pay['monto_comision'] ?? 0, 0, ',', '.'); ?>
                                             </span>
                                         </td>
                                         <td>

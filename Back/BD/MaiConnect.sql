@@ -1,7 +1,3 @@
--- =====================================================
--- MAI CONNECT - SCHEMA INTEGRAL (3FN + COMPATIBILIDAD PHP)
--- =====================================================
-
 -- 1. DROP EN ORDEN SEGURO (MANTENIENDO INTEGRIDAD)
 DROP VIEW IF EXISTS vw_comisiones_vendedor;
 DROP VIEW IF EXISTS vw_totales_pedido;
@@ -36,189 +32,211 @@ DROP TABLE IF EXISTS tbl_producto;
 
 -- 2. TABLAS MAESTRAS (ESTADOS Y DEFINICIONES)
 
+-- Definición de roles del sistema (Admin, Vendedor, etc.)
 CREATE TABLE tbl_rol (
-    id_role SMALLINT PRIMARY KEY,
-    nombre_rol VARCHAR(50) NOT NULL UNIQUE,
-    descripcion TEXT
+    id_role         SMALLINT           PRIMARY KEY,          -- Identificador único del rol
+    nombre_rol      VARCHAR(50)        NOT NULL UNIQUE,      -- Nombre descriptivo (ej. ADMIN)
+    descripcion     TEXT                                     -- Detalles adicionales del rol
 );
 
+-- Estados posibles de un pedido (0=Pendiente, 1=Proceso, etc.)
 CREATE TABLE tbl_estado_pedido (
-    id_estado_pedido SMALLINT PRIMARY KEY,
-    nombre_estado VARCHAR(50) NOT NULL UNIQUE
+    id_estado_pedido SMALLINT          PRIMARY KEY,          -- ID del estado (numérico)
+    nombre_estado    VARCHAR(50)       NOT NULL UNIQUE       -- Nombre del estado (ej. Pendiente)
 );
 
+-- Estados del comprobante de pago subido por el cliente
 CREATE TABLE tbl_estado_pago (
-    id_estado_pago SMALLINT PRIMARY KEY,
-    nombre_estado VARCHAR(50) NOT NULL UNIQUE
+    id_estado_pago   SMALLINT          PRIMARY KEY,          -- ID del estado de pago
+    nombre_estado    VARCHAR(50)       NOT NULL UNIQUE       -- Descripcion (ej. Aprobado)
 );
 
+-- Estados de membresía para vendedores
 CREATE TABLE tbl_estado_miembro (
-    id_estado_miembro SMALLINT PRIMARY KEY,
-    nombre_estado VARCHAR(50) NOT NULL UNIQUE
+    id_estado_miembro SMALLINT         PRIMARY KEY,          -- ID del estado de miembro
+    nombre_estado     VARCHAR(50)      NOT NULL UNIQUE       -- Descripcion (ej. Activo)
 );
 
+-- Permisos específicos para granularidad de acceso (RBAC)
 CREATE TABLE tbl_permiso (
-    id_permiso SERIAL PRIMARY KEY,
-    nombre_permiso VARCHAR(100) NOT NULL UNIQUE
+    id_permiso      INTEGER            PRIMARY KEY,          -- ID manual del permiso
+    nombre_permiso  VARCHAR(100)       NOT NULL UNIQUE       -- Nombre técnico del permiso
 );
 
+-- Tipos de movimientos en inventario (Entrada/Salida)
 CREATE TABLE tbl_tipo_movimiento_stock (
-    id_tipo_movimiento SERIAL PRIMARY KEY,
-    nombre_tipo VARCHAR(100) NOT NULL UNIQUE
+    id_tipo_movimiento INTEGER         PRIMARY KEY,          -- ID del tipo de movimiento
+    nombre_tipo     VARCHAR(100)       NOT NULL UNIQUE       -- Nombre (ej. Venta, Ajuste)
 );
 
+-- Métodos de pago permitidos
 CREATE TABLE tbl_metodo_pago (
-    id_metodo_pago SERIAL PRIMARY KEY,
-    nombre_metodo VARCHAR(100) NOT NULL UNIQUE
+    id_metodo_pago  INTEGER            PRIMARY KEY,          -- 1=Nequi, 2=Daviplata, etc.
+    nombre_metodo   VARCHAR(100)       NOT NULL UNIQUE       -- Nombre del método de pago
 );
 
 -- 3. TABLAS PRINCIPALES (ENTIDADES)
 
+-- Usuarios del sistema (Credenciales y datos básicos)
 CREATE TABLE tbl_usuario (
-    id_usuario SERIAL PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
-    apellido VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    contrasena VARCHAR(255) NOT NULL,
-    id_rol SMALLINT REFERENCES tbl_rol(id_role),
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id_usuario      INTEGER            PRIMARY KEY,          -- Identificador único (Manual)
+    nombre          VARCHAR(100)       NOT NULL,             -- Nombres del usuario
+    apellido        VARCHAR(100)       NOT NULL,             -- Apellidos del usuario
+    email           VARCHAR(100)       NOT NULL UNIQUE,      -- Correo (usado para login)
+    contrasena      VARCHAR(255)       NOT NULL,             -- Hash BCrypt de la contraseña
+    id_rol          SMALLINT           REFERENCES tbl_rol(id_role), -- FK a roles
+    fecha_creacion  TIMESTAMP          DEFAULT CURRENT_TIMESTAMP, -- Registro de creación
+    fecha_actualizacion TIMESTAMP     DEFAULT CURRENT_TIMESTAMP  -- Última edición
 );
 
+-- Perfil detallado de los vendedores (miembros del equipo)
 CREATE TABLE tbl_miembro (
-    id_miembro SERIAL PRIMARY KEY,
-    id_usuario INTEGER NOT NULL UNIQUE REFERENCES tbl_usuario(id_usuario) ON DELETE RESTRICT,
-    porcentaje_comision DECIMAL(5, 2) NOT NULL DEFAULT 10.00,
-    universidad VARCHAR(150),
-    telefono VARCHAR(15),
-    estado VARCHAR(20) DEFAULT 'activo', -- Para compatibilidad PHP inmediata
-    id_estado_miembro SMALLINT REFERENCES tbl_estado_miembro(id_estado_miembro), -- Para 3FN futura
-    fecha_contratacion DATE DEFAULT CURRENT_DATE,
-    notas TEXT
+    id_miembro      INTEGER            PRIMARY KEY,          -- Identificador único de miembro (Manual)
+    id_usuario      INTEGER            NOT NULL UNIQUE REFERENCES tbl_usuario(id_usuario) ON DELETE RESTRICT,
+    porcentaje_comision DECIMAL(5, 2) NOT NULL DEFAULT 10.00, -- % que gana por venta
+    universidad     VARCHAR(150),                            -- Institución educativa
+    telefono        VARCHAR(15),                             -- Contacto directoizado (10 digitos)
+    estado          VARCHAR(20)        DEFAULT 'activo',     -- Estado lógico (activo/inactivo)
+    id_estado_miembro SMALLINT         REFERENCES tbl_estado_miembro(id_estado_miembro),
+    fecha_contratacion DATE            DEFAULT CURRENT_DATE, -- Fecha de vinculación
+    notas           TEXT                                     -- Observaciones internas
 );
 
+-- Catálogo de productos disponibles para la venta
 CREATE TABLE tbl_producto (
-    id_producto SERIAL PRIMARY KEY,
-    nombre_producto VARCHAR(150) NOT NULL,
-    descripcion TEXT,
-    precio DECIMAL(10, 2) NOT NULL,
-    stock INTEGER NOT NULL DEFAULT 0,
-    imagen_principal VARCHAR(255),
-    estado VARCHAR(20) DEFAULT 'activo',
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id_producto     INTEGER            PRIMARY KEY,          -- Identificador único (Manual)
+    nombre_producto VARCHAR(150)       NOT NULL,             -- Nombre del producto (ej. Torta)
+    descripcion     TEXT,                                    -- Descripción o ingredientes
+    precio          DECIMAL(10, 2)     NOT NULL,             -- Precio de venta al público
+    stock           INTEGER            NOT NULL DEFAULT 0,   -- Cantidad disponible actual
+    imagen_principal VARCHAR(255),                            -- Ruta del archivo de imagen
+    estado          VARCHAR(20)        DEFAULT 'activo',     -- Para soft delete de productos
+    fecha_creacion  TIMESTAMP          DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion TIMESTAMP      DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Registro de pagos de comisiones realizados a los vendedores
 CREATE TABLE tbl_pago_comision (
-    id_pago_comision SERIAL PRIMARY KEY,
-    id_vendedor INTEGER NOT NULL REFERENCES tbl_miembro(id_miembro) ON DELETE RESTRICT,
-    monto DECIMAL(10, 2) NOT NULL,
-    ruta_archivo VARCHAR(255),
-    fecha_pago TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    estado VARCHAR(20) DEFAULT 'completado',
-    notas TEXT
+    id_pago_comision INTEGER           PRIMARY KEY,          -- ID del comprobante de pago
+    id_vendedor     INTEGER            NOT NULL REFERENCES tbl_miembro(id_miembro) ON DELETE RESTRICT,
+    monto           DECIMAL(10, 2)     NOT NULL,             -- Cantidad pagada al vendedor
+    ruta_archivo    VARCHAR(255),                            -- Evidencia del pago (imagen)
+    fecha_pago      TIMESTAMP          DEFAULT CURRENT_TIMESTAMP,
+    estado          VARCHAR(20)        DEFAULT 'completado', -- Estado del pago
+    notas           TEXT                                     -- Notas del administrador
 );
 
+-- Encabezado de los pedidos realizados
 CREATE TABLE tbl_pedido (
-    id_pedido SERIAL PRIMARY KEY,
-    id_vendedor INTEGER REFERENCES tbl_miembro(id_miembro) ON DELETE SET NULL,
-    telefono_contacto VARCHAR(20) NOT NULL,
-    direccion_entrega TEXT NOT NULL,
-    fecha_entrega DATE NOT NULL,
-    notas TEXT,
-    estado SMALLINT NOT NULL DEFAULT 0, -- 0=Pendiente, 1=En Proceso, 2=Completado, 3=Cancelado
-    estado_pago SMALLINT DEFAULT 0,    -- 0=Sin Comprobante, 1=Subido, 2=Aprobado, 3=Rechazado
-    id_estado_pedido SMALLINT REFERENCES tbl_estado_pedido(id_estado_pedido),
-    id_estado_pago SMALLINT REFERENCES tbl_estado_pago(id_estado_pago),
-    monto_comision DECIMAL(10, 2),
-    id_pago_comision INTEGER REFERENCES tbl_pago_comision(id_pago_comision) ON DELETE SET NULL,
-    nota_cancelacion TEXT,
-    estado_logico VARCHAR(20) DEFAULT 'activo',
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id_pedido       INTEGER            PRIMARY KEY,          -- Código único de orden (Manual)
+    id_vendedor     INTEGER            REFERENCES tbl_miembro(id_miembro) ON DELETE SET NULL,
+    telefono_contacto VARCHAR(20)      NOT NULL,             -- Teléfono del cliente final
+    direccion_entrega TEXT             NOT NULL,             -- Ubicación de entrega
+    fecha_entrega   DATE               NOT NULL,             -- Fecha programada de entrega
+    notas           TEXT,                                    -- Requerimientos especiales
+    estado          SMALLINT           NOT NULL DEFAULT 0,   -- 0:Pendiente, 2:Completado, 3:Canc
+    estado_pago     SMALLINT           DEFAULT 0,            -- 0:Sin, 1:Subido, 2:Ap, 3:Rech
+    id_estado_pedido SMALLINT          REFERENCES tbl_estado_pedido(id_estado_pedido),
+    id_estado_pago  SMALLINT           REFERENCES tbl_estado_pago(id_estado_pago),
+    monto_comision  DECIMAL(10, 2),                          -- Comisión calculada para esta venta
+    id_pago_comision INTEGER           REFERENCES tbl_pago_comision(id_pago_comision) ON DELETE SET NULL,
+    nota_cancelacion TEXT,                                   -- Por qué se canceló el pedido
+    estado_logico   VARCHAR(20)        DEFAULT 'activo',     -- Control de borrado lógico
+    fecha_creacion  TIMESTAMP          DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Detalle línea por línea de los productos en un pedido
 CREATE TABLE tbl_detalle_pedido (
-    id_detalle_pedido SERIAL PRIMARY KEY,
-    id_pedido INTEGER NOT NULL REFERENCES tbl_pedido(id_pedido) ON DELETE RESTRICT,
-    id_producto INTEGER NOT NULL REFERENCES tbl_producto(id_producto) ON DELETE RESTRICT,
-    cantidad DECIMAL(10, 2) NOT NULL CHECK (cantidad >= 1),
-    precio_unitario DECIMAL(10, 2) NOT NULL,
-    estado VARCHAR(20) DEFAULT 'activo'
+    id_detalle_pedido INTEGER          PRIMARY KEY,          -- ID de la fila de detalle
+    id_pedido       INTEGER            NOT NULL REFERENCES tbl_pedido(id_pedido) ON DELETE RESTRICT,
+    id_producto     INTEGER            NOT NULL REFERENCES tbl_producto(id_producto) ON DELETE RESTRICT,
+    cantidad        DECIMAL(10, 2)     NOT NULL CHECK (cantidad >= 1),
+    precio_unitario DECIMAL(10, 2)     NOT NULL,             -- Precio al que se vendió (histórico)
+    estado          VARCHAR(20)        DEFAULT 'activo'      -- Estado lógico de la línea
 );
 
+-- Evidencias de pago subidas para cada pedido
 CREATE TABLE tbl_comprobante_pago (
-    id_comprobante_pago SERIAL PRIMARY KEY,
-    id_pedido INTEGER NOT NULL REFERENCES tbl_pedido(id_pedido) ON DELETE RESTRICT,
-    ruta_archivo VARCHAR(255) NOT NULL,
-    fecha_subida TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    estado VARCHAR(20) DEFAULT 'pendiente',
-    notas TEXT,
-    estado_registro VARCHAR(20) DEFAULT 'activo'
+    id_comprobante_pago INTEGER        PRIMARY KEY,          -- ID del comprobante
+    id_pedido       INTEGER            NOT NULL REFERENCES tbl_pedido(id_pedido) ON DELETE RESTRICT,
+    ruta_archivo    VARCHAR(255)       NOT NULL,             -- Ruta física de la imagen
+    fecha_subida    TIMESTAMP          DEFAULT CURRENT_TIMESTAMP,
+    estado          VARCHAR(20)        DEFAULT 'pendiente',  -- Aprobado/Rechazado
+    notas           TEXT,                                    -- Notas del revisor
+    estado_registro VARCHAR(20)        DEFAULT 'activo'      -- Control de borrado
 );
 
+-- Trazabilidad de los estados de un pedido
 CREATE TABLE tbl_historial_pedido (
-    id_historial SERIAL PRIMARY KEY,
-    id_pedido INTEGER NOT NULL REFERENCES tbl_pedido(id_pedido) ON DELETE RESTRICT,
-    estado_anterior SMALLINT,
-    estado_nuevo SMALLINT NOT NULL,
-    usuario_cambio INTEGER REFERENCES tbl_usuario(id_usuario) ON DELETE SET NULL,
-    fecha_cambio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    motivo TEXT,
-    estado_registro VARCHAR(20) DEFAULT 'activo'
+    id_historial    INTEGER            PRIMARY KEY,          -- ID del registro histórico
+    id_pedido       INTEGER            NOT NULL REFERENCES tbl_pedido(id_pedido) ON DELETE RESTRICT,
+    estado_anterior SMALLINT,                                 -- Estado antes del cambio
+    estado_nuevo    SMALLINT           NOT NULL,             -- Estado al que pasó
+    usuario_cambio  INTEGER            REFERENCES tbl_usuario(id_usuario) ON DELETE SET NULL,
+    fecha_cambio    TIMESTAMP          DEFAULT CURRENT_TIMESTAMP,
+    motivo          TEXT,                                    -- Por qué se hizo el cambio
+    estado_registro VARCHAR(20)        DEFAULT 'activo'
 );
 
 -- 4. OTRAS TABLAS ESTRUCTURALES
 
+-- Relación de muchos a muchos entre Roles y Permisos
 CREATE TABLE tbl_rol_permiso (
-    id_rol SMALLINT REFERENCES tbl_rol(id_role),
-    id_permiso INTEGER REFERENCES tbl_permiso(id_permiso),
-    PRIMARY KEY (id_rol, id_permiso)
+    id_rol          SMALLINT           REFERENCES tbl_rol(id_role), -- FK a rol
+    id_permiso      INTEGER            REFERENCES tbl_permiso(id_permiso), -- FK a permiso
+    PRIMARY KEY (id_rol, id_permiso)                               -- Llave compuesta
 );
 
+-- Catálogo de razones por las cuales se cancela un pedido
 CREATE TABLE tbl_tipo_cancelacion (
-    id_tipo_cancelacion SERIAL PRIMARY KEY,
-    descripcion VARCHAR(150) NOT NULL
+    id_tipo_cancelacion INTEGER        PRIMARY KEY,          -- Identificador único
+    descripcion     VARCHAR(150)       NOT NULL              -- Descripción (ej. No había stock)
 );
 
+-- Kardex / Control de inventario histórico
 CREATE TABLE tbl_movimiento_stock (
-    id_movimiento SERIAL PRIMARY KEY,
-    id_producto INTEGER NOT NULL REFERENCES tbl_producto(id_producto),
-    id_tipo_movimiento INTEGER REFERENCES tbl_tipo_movimiento_stock(id_tipo_movimiento),
-    cantidad INTEGER NOT NULL,
-    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    usuario_id INTEGER REFERENCES tbl_usuario(id_usuario)
+    id_movimiento   INTEGER            PRIMARY KEY,          -- Registro de movimiento
+    id_producto     INTEGER            NOT NULL REFERENCES tbl_producto(id_producto),
+    id_tipo_movimiento INTEGER         REFERENCES tbl_tipo_movimiento_stock(id_tipo_movimiento),
+    cantidad        INTEGER            NOT NULL,             -- Unidades (+ entrada, - salida)
+    fecha           TIMESTAMP          DEFAULT CURRENT_TIMESTAMP,
+    usuario_id      INTEGER            REFERENCES tbl_usuario(id_usuario) -- Quien hizo el ajuste
 );
 
+-- Trazabilidad de cambios sensibles en tablas (CRUD audit)
 CREATE TABLE tbl_auditoria (
-    id_auditoria SERIAL PRIMARY KEY,
-    id_usuario INTEGER REFERENCES tbl_usuario(id_usuario),
-    tabla_afectada VARCHAR(100) NOT NULL,
-    accion VARCHAR(50) NOT NULL,
-    valor_anterior TEXT,
-    valor_nuevo TEXT,
-    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id_auditoria    INTEGER            PRIMARY KEY,          -- Registro de auditoría
+    id_usuario      INTEGER            REFERENCES tbl_usuario(id_usuario),
+    tabla_afectada  VARCHAR(100)       NOT NULL,             -- Nombre de la tabla
+    accion          VARCHAR(50)        NOT NULL,             -- INSERT, UPDATE, DELETE
+    valor_anterior  TEXT,                                    -- JSON con valores viejos
+    valor_nuevo     TEXT,                                    -- JSON con valores nuevos
+    fecha           TIMESTAMP          DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Errores y eventos críticos detectados por el software
 CREATE TABLE tbl_log_sistema (
-    id_log SERIAL PRIMARY KEY,
-    nivel VARCHAR(20) NOT NULL,
-    mensaje TEXT NOT NULL,
-    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id_log          INTEGER            PRIMARY KEY,          -- Identificador de error
+    nivel           VARCHAR(20)        NOT NULL,             -- INFO, WARNING, ERROR, CRITICAL
+    mensaje         TEXT               NOT NULL,             -- Descripción técnica del log
+    fecha           TIMESTAMP          DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Ajustes globales de la aplicación (Nombre tienda, IVA, etc.)
 CREATE TABLE tbl_configuracion_general (
-    id_configuracion SERIAL PRIMARY KEY,
-    clave VARCHAR(100) NOT NULL UNIQUE,
-    valor TEXT
+    id_configuracion INTEGER           PRIMARY KEY,          -- Identificador de ajuste
+    clave           VARCHAR(100)       NOT NULL UNIQUE,      -- Nombre clave (ej. IVA_PERCENT)
+    valor           TEXT                                     -- Valor de la configuración
 );
 
+-- Gestión de tokens y tiempos de autenticación
 CREATE TABLE tbl_sesion_usuario (
-    id_sesion SERIAL PRIMARY KEY,
-    id_usuario INTEGER NOT NULL REFERENCES tbl_usuario(id_usuario),
-    token VARCHAR(255),
-    fecha_inicio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    fecha_fin TIMESTAMP,
-    activa BOOLEAN DEFAULT TRUE
+    id_sesion       INTEGER            PRIMARY KEY,          -- Identificador de sesión
+    id_usuario      INTEGER            NOT NULL REFERENCES tbl_usuario(id_usuario),
+    token           VARCHAR(255),                            -- Token JWT o ID de sesión
+    fecha_inicio    TIMESTAMP          DEFAULT CURRENT_TIMESTAMP,
+    fecha_fin       TIMESTAMP,                               -- Cuándo expiró o cerró
+    activa          BOOLEAN            DEFAULT TRUE          -- ¿Sesión válida actualmente?
 );
 
 -- 5. DATOS MAESTROS E INICIALES
@@ -236,16 +254,16 @@ INSERT INTO tbl_estado_pago (id_estado_pago, nombre_estado) VALUES
 INSERT INTO tbl_estado_miembro (id_estado_miembro, nombre_estado) VALUES
 (1, 'Activo'), (2, 'Inactivo'), (3, 'Suspendido');
 
-INSERT INTO tbl_usuario (nombre, apellido, email, contrasena, id_rol) VALUES
-('Admin', 'Sistema', 'admin@maishop.com', '$2y$10$cnwQTD8nHIx2Z1qIUrCaouWcDtyyoVkGzE4TNfXlrByIgLUSV5/0S', 1),
-('Juan', 'Pérez', 'vendedor@maishop.com', '$2y$10$mXYW56m2us6UIU/d7l36Supd193Puln2wsHbk8Jzqpbq.xb25L2lK', 2);
+INSERT INTO tbl_usuario (id_usuario, nombre, apellido, email, contrasena, id_rol) VALUES
+(1, 'Admin', 'Sistema', 'admin@maishop.com', '$2y$10$cnwQTD8nHIx2Z1qIUrCaouWcDtyyoVkGzE4TNfXlrByIgLUSV5/0S', 1),
+(2, 'Juan', 'Pérez', 'vendedor@maishop.com', '$2y$10$mXYW56m2us6UIU/d7l36Supd193Puln2wsHbk8Jzqpbq.xb25L2lK', 2);
 
-INSERT INTO tbl_miembro (id_usuario, porcentaje_comision, universidad, telefono, estado) 
-SELECT id_usuario, 15.00, 'Universidad Central', '3001234567', 'activo' FROM tbl_usuario WHERE email = 'vendedor@maishop.com';
+INSERT INTO tbl_miembro (id_miembro, id_usuario, porcentaje_comision, universidad, telefono, estado) 
+SELECT 1, id_usuario, 15.00, 'Universidad Central', '3001234567', 'activo' FROM tbl_usuario WHERE email = 'vendedor@maishop.com';
 
-INSERT INTO tbl_producto (nombre_producto, descripcion, precio, stock) VALUES
-('Torta de Chocolate', 'Deliciosa torta con ganache', 35000.00, 20),
-('Cupcakes de Fresa', 'Decorados con crema natural', 5000.00, 40);
+INSERT INTO tbl_producto (id_producto, nombre_producto, descripcion, precio, stock) VALUES
+(1, 'Torta de Chocolate', 'Deliciosa torta con ganache', 35000.00, 20),
+(2, 'Cupcakes de Fresa', 'Decorados con crema natural', 5000.00, 40);
 
 -- 6. VISTAS
 
@@ -289,10 +307,12 @@ CREATE TRIGGER trg_usuario_actualizado BEFORE UPDATE ON tbl_usuario FOR EACH ROW
 CREATE TRIGGER trg_producto_actualizado BEFORE UPDATE ON tbl_producto FOR EACH ROW EXECUTE FUNCTION actualizar_fecha_modificacion();
 
 CREATE OR REPLACE FUNCTION registrar_cambio_estado_pedido() RETURNS TRIGGER AS $$
+DECLARE v_next_id INTEGER;
 BEGIN
     IF OLD.estado IS DISTINCT FROM NEW.estado THEN
-        INSERT INTO tbl_historial_pedido (id_pedido, estado_anterior, estado_nuevo, motivo)
-        VALUES (NEW.id_pedido, OLD.estado, NEW.estado, 'Cambio automático');
+        SELECT COALESCE(MAX(id_historial), 0) + 1 INTO v_next_id FROM tbl_historial_pedido;
+        INSERT INTO tbl_historial_pedido (id_historial, id_pedido, estado_anterior, estado_nuevo, motivo)
+        VALUES (v_next_id, NEW.id_pedido, OLD.estado, NEW.estado, 'Cambio automático');
     END IF;
     RETURN NEW;
 END; $$ LANGUAGE plpgsql;

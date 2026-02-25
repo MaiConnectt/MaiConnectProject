@@ -87,8 +87,8 @@
 
                 <div class="form-group">
                     <label for="telefono">WhatsApp</label>
-                    <input type="tel" id="telefono" name="telefono" class="form-control" placeholder="+57 300 000 0000"
-                        required>
+                    <input type="tel" id="telefono" name="telefono" class="form-control" maxlength="10" minlength="10"
+                        oninput="this.value = this.value.replace(/[^0-9]/g, '');" placeholder="3001234567" required>
                 </div>
 
                 <div class="form-group">

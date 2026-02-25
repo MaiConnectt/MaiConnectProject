@@ -13,172 +13,10 @@ try {
     $products = [];
 }
 
-// Procesar formulario
-$success_message = null;
-$error_message = null;
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        $pdo->beginTransaction();
-
-        // Datos del cliente
-        $client_phone = trim($_POST['client_phone'] ?? '');
-        $client_name = trim($_POST['client_name'] ?? '');
-        $client_email = trim($_POST['client_email'] ?? '');
-        $client_address = trim($_POST['client_address'] ?? '');
-
-        // Split name
-        $name_parts = explode(' ', $client_name, 2);
-        $client_first_name = $name_parts[0] ?? 'Cliente';
-        $client_last_name = $name_parts[1] ?? '';
-
-        // Datos del pedido
-        $delivery_date = $_POST['delivery_date'] ?? null;
-        $notes = trim($_POST['notes'] ?? '');
-        $products_data = $_POST['products'] ?? [];
-        $total_order_amount = 0;
-
-
-        // Validaciones
-        if (empty($client_phone)) {
-            throw new Exception("El teléfono de contacto es obligatorio");
-        }
-
-        if (empty($delivery_date)) {
-            throw new Exception("La fecha de entrega es obligatoria");
-        }
-
-        $min_delivery_date = date('Y-m-d', strtotime('+2 days'));
-        if ($delivery_date < $min_delivery_date) {
-            throw new Exception("La fecha de entrega debe ser mínimo 2 días después de la fecha actual ($min_delivery_date)");
-        }
-
-        if (empty($client_address)) {
-            throw new Exception("La dirección de entrega es obligatoria");
-        }
-
-        if (empty($products_data)) {
-            throw new Exception("Debes agregar al menos un producto");
-        }
-
-        // Generar ID para pedido
-        $next_order_id_stmt = $pdo->query("SELECT COALESCE(MAX(id_pedido), 0) + 1 as next_id FROM tbl_pedido");
-        $next_order_id = $next_order_id_stmt->fetch()['next_id'];
-        $order_id = $next_order_id;
-
-
-        // Crear pedido
-        $order_stmt = $pdo->prepare("
-            INSERT INTO tbl_pedido (
-                id_pedido, id_vendedor, telefono_contacto, fecha_entrega, 
-                direccion_entrega, notas, estado, estado_pago, monto_comision
-            )
-            VALUES (?, ?, ?, ?, ?, ?, 0, ?, 0)
-        ");
-
-        $order_stmt->execute([
-            $order_id,
-            $_SESSION['member_id'],
-            $client_phone,
-            $delivery_date,
-            $client_address,
-            $notes,
-            0 // estado_pago inicial: Sin comprobante
-        ]);
-
-
-        // Agregar productos al pedido
-        foreach ($products_data as $product_id => $quantity) {
-            // Validar cantidad en backend (Seguridad Extra)
-            if (!is_numeric($quantity)) {
-                throw new Exception("La cantidad debe ser un número.");
-            }
-
-            $quantity = (float) $quantity; // Convertir para verificar
-
-            if ($quantity < 0) {
-                throw new Exception("No se permiten cantidades negativas.");
-            }
-
-            // Solo procesar si es mayor a 0 y es un entero
-            if ($quantity > 0) {
-                if (floor($quantity) != $quantity) {
-                    throw new Exception("La cantidad debe ser un número entero.");
-                }
-
-                $quantity = (int) $quantity;
-
-                // Generar ID para detalle
-                $next_detail_id_stmt = $pdo->query("SELECT COALESCE(MAX(id_detalle_pedido), 0) + 1 as next_id FROM tbl_detalle_pedido");
-                $next_detail_id = $next_detail_id_stmt->fetch()['next_id'];
-
-                // Obtener stock y precio con bloqueo (FOR UPDATE)
-                $stock_stmt = $pdo->prepare("SELECT precio, stock, nombre_producto FROM tbl_producto WHERE id_producto = ? FOR UPDATE");
-                $stock_stmt->execute([$product_id]);
-                $product = $stock_stmt->fetch();
-
-                if (!$product) {
-                    throw new Exception("El producto seleccionado no existe.");
-                }
-
-                if ($product['stock'] < $quantity) {
-                    throw new Exception("Stock insuficiente para: " . $product['nombre_producto'] . " (Disponible: " . $product['stock'] . ")");
-                }
-
-                $price = $product['precio'];
-
-                // Descontar stock
-                $update_stock_stmt = $pdo->prepare("UPDATE tbl_producto SET stock = stock - ? WHERE id_producto = ?");
-                $update_stock_stmt->execute([$quantity, $product_id]);
-
-                $detail_stmt = $pdo->prepare("
-                    INSERT INTO tbl_detalle_pedido (id_detalle_pedido, id_pedido, id_producto, cantidad, precio_unitario)
-                    VALUES (?, ?, ?, ?, ?)
-                ");
-
-                $detail_stmt->execute([
-                    $next_detail_id,
-                    $order_id,
-                    $product_id,
-                    $quantity,
-                    $price
-                ]);
-
-                $total_order_amount += ($quantity * $price);
-            }
-        }
-
-        // Calcular comisión
-        $commission_percentage = $_SESSION['commission_percentage'] ?? 5.00;
-        $commission_amount = $total_order_amount * ($commission_percentage / 100);
-
-        // Actualizar pedido con el monto final de comisión
-        $update_order_stmt = $pdo->prepare("UPDATE tbl_pedido SET monto_comision = ? WHERE id_pedido = ?");
-        $update_order_stmt->execute([$commission_amount, $order_id]);
-
-
-        $pdo->commit();
-
-        // Log History (Initial Creation)
-        try {
-            $log_stmt = $pdo->prepare("INSERT INTO tbl_historial_pedido (id_pedido, usuario_cambio, estado_anterior, estado_nuevo, motivo) VALUES (?, ?, NULL, 0, 'Pedido creado por el vendedor')");
-            $log_stmt->execute([$order_id, $_SESSION['user_id']]);
-        } catch (Exception $e) {
-            // Non-blocking history error
-        }
-
-        $success_message = "¡Pedido Creado exitosamente!";
-
-        // Limpiar formulario
-        $_POST = [];
-
-    } catch (Exception $e) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
-        $error_message = $e->getMessage();
-    }
-}
+// Procesar formulario - Ahora se maneja en acciones.php
+$success_message = $_SESSION['success'] ?? null;
+$error_message = $_SESSION['error'] ?? null;
+unset($_SESSION['success'], $_SESSION['error']);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -332,7 +170,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 <?php endif; ?>
 
-                <form method="POST" id="orderForm" enctype="multipart/form-data">
+                <form method="POST" action="acciones.php" id="orderForm" enctype="multipart/form-data">
+                    <input type="hidden" name="action" value="crear_pedido">
                     <!-- Client Information -->
                     <div class="content-card">
                         <div class="card-header">
@@ -344,8 +183,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             <div class="form-group">
                                 <label class="form-label">Teléfono / Contacto *</label>
-                                <input type="tel" name="client_phone" class="form-input" required
-                                    placeholder="Para contactar al recibir">
+                                <input type="tel" name="client_phone" class="form-input" required maxlength="10"
+                                    minlength="10" pattern="\d{10}"
+                                    oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                                    title="Debe tener exactamente 10 dígitos numéricos" placeholder="Ej: 3001234567">
                             </div>
 
                             <div class="form-group">

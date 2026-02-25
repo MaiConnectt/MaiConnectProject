@@ -135,14 +135,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // 2. Insert Payment Record
         // id_vendedor (tbl_pago_comision) -> id_miembro
-        // Using RETURNING id_pago_comision for Postgres
+        $next_payout_id = $pdo->query("SELECT COALESCE(MAX(id_pago_comision), 0) + 1 as next_id FROM tbl_pago_comision")->fetch()['next_id'];
         $stmt_pay = $pdo->prepare("
-            INSERT INTO tbl_pago_comision (id_vendedor, monto, ruta_archivo, estado, notas, fecha_pago)
-            VALUES (?, ?, ?, 'completado', ?, NOW())
-            RETURNING id_pago_comision
+            INSERT INTO tbl_pago_comision (id_pago_comision, id_vendedor, monto, ruta_archivo, estado, notas, fecha_pago)
+            VALUES (?, ?, ?, ?, 'completado', ?, NOW())
         ");
-        $stmt_pay->execute([$id_member, $payment_amount, $proof_path, $notes]);
-        $payout_id = $stmt_pay->fetchColumn();
+        $stmt_pay->execute([$next_payout_id, $id_member, $payment_amount, $proof_path, $notes]);
+        $payout_id = $next_payout_id;
 
         if (!$payout_id) {
              throw new Exception("Error al registrar el pago.");

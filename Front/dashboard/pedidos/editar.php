@@ -19,11 +19,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->beginTransaction();
 
         // Get form data
-        $id_cliente = $_POST['customer_id'] ?? null;
         $nombre_cliente = trim($_POST['customer_name'] ?? '');
         $telefono_cliente = trim($_POST['customer_phone'] ?? '');
-        $email_cliente = trim($_POST['customer_email'] ?? '');
-        $estado_anterior = (int) ($_POST['old_status'] ?? 0); // Assuming old_status is already an integer
+        $direccion_entrega = trim($_POST['delivery_address'] ?? '');
+        $fecha_entrega = $_POST['delivery_date'] ?? null;
+        $estado_anterior = (int) ($_POST['old_status'] ?? 0);
         $estado_nuevo_str = $_POST['status'] ?? 'pending';
         $notas = trim($_POST['notes'] ?? '');
         $productos = $_POST['products'] ?? [];
@@ -33,40 +33,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $estado_nuevo = $estado_map[$estado_nuevo_str] ?? 0;
 
         // Validate
-        if (empty($nombre_cliente)) {
-            throw new Exception('El nombre del cliente es obligatorio');
+        if (empty($telefono_cliente)) {
+            throw new Exception('El teléfono del cliente es obligatorio');
         }
 
         if (empty($productos)) {
             throw new Exception('Debe agregar al menos un producto');
         }
 
-        // Update customer if needed
-        if (!empty($id_cliente)) {
-            $stmt = $pdo->prepare("
-                UPDATE tbl_cliente 
-                SET nombre = ?, telefono = ?, email = ?
-                WHERE id_cliente = ?
-            ");
-            $stmt->execute([$nombre_cliente, $telefono_cliente, $email_cliente, $id_cliente]);
-        }
-
         // Update order
         $stmt = $pdo->prepare("
             UPDATE tbl_pedido 
-            SET estado = ?, notas = ?, fecha_actualizacion = NOW()
+            SET estado = ?, notas = ?, fecha_actualizacion = NOW(), 
+                telefono_contacto = ?, direccion_entrega = ?, fecha_entrega = COALESCE(?, fecha_entrega)
             WHERE id_pedido = ?
         ");
-        $stmt->execute([$estado_nuevo, $notas, $id_pedido]);
+        $stmt->execute([$estado_nuevo, $notas, $telefono_cliente, $direccion_entrega, $fecha_entrega, $order_id]);
 
         // Marcar detalles anteriores como inactivos (Eliminación lógica)
         $stmt = $pdo->prepare("UPDATE tbl_detalle_pedido SET estado = 'inactivo' WHERE id_pedido = ?");
-        $stmt->execute([$id_pedido]);
+        $stmt->execute([$order_id]);
 
         // Create new order items
-        $stmt = $pdo->prepare("
-            INSERT INTO tbl_detalle_pedido (id_pedido, id_producto, cantidad, precio_unitario)
-            VALUES (?, ?, ?, ?)
+        $stmt_detail = $pdo->prepare("
+            INSERT INTO tbl_detalle_pedido (id_detalle_pedido, id_pedido, id_producto, cantidad, precio_unitario)
+            VALUES (?, ?, ?, ?, ?)
         ");
 
         foreach ($productos as $product) {
@@ -77,14 +68,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!$id_producto) {
                 // If product doesn't exist, create it with default stock 0
-                $stmt_new_prod = $pdo->prepare("INSERT INTO tbl_producto (nombre_producto, precio, stock) VALUES (?, ?, 0) RETURNING id_producto");
-                $stmt_new_prod->execute([$product['name'], $product['price']]);
-                $id_producto = $stmt_new_prod->fetchColumn();
+                $next_prod_id = $pdo->query("SELECT COALESCE(MAX(id_producto), 0) + 1")->fetchColumn();
+                $stmt_new_prod = $pdo->prepare("INSERT INTO tbl_producto (id_producto, nombre_producto, precio, stock, estado) VALUES (?, ?, ?, 0, 'activo')");
+                $stmt_new_prod->execute([$next_prod_id, $product['name'], $product['price']]);
+                $id_producto = $next_prod_id;
             }
 
             if ($id_producto && !empty($product['quantity']) && !empty($product['price'])) {
-                $stmt->execute([
-                    $id_pedido,
+                $next_detail_id = $pdo->query("SELECT COALESCE(MAX(id_detalle_pedido), 0) + 1")->fetchColumn();
+                $stmt_detail->execute([
+                    $next_detail_id,
+                    $order_id,
                     $id_producto,
                     $product['quantity'],
                     $product['price']
@@ -92,30 +86,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Add history entry if status changed
-        if ($estado_anterior !== $estado_nuevo) {
-            // Get current payment status for history
-            $stmt_pay = $pdo->prepare("SELECT estado_pago FROM tbl_pedido WHERE id_pedido = ?");
-            $stmt_pay->execute([$order_id]);
-            $pago_actual = $stmt_pay->fetchColumn();
-
-            $log = $pdo->prepare("INSERT INTO tbl_historial_pedido (id_pedido, usuario_cambio, estado_anterior, estado_nuevo, motivo) VALUES (?, ?, ?, ?, ?)");
-            $log->execute([
-                $order_id,
-                $_SESSION['user_id'],
-                $estado_anterior,
-                $estado_nuevo,
-                'Detalles del pedido editados desde el panel de administración'
-            ]);
-        }
+        // Add history entry if status changed or data updated
+        $next_historial_id = $pdo->query("SELECT COALESCE(MAX(id_historial), 0) + 1")->fetchColumn();
+        $log = $pdo->prepare("INSERT INTO tbl_historial_pedido (id_historial, id_pedido, usuario_cambio, estado_anterior, estado_nuevo, motivo) VALUES (?, ?, ?, ?, ?, ?)");
+        $log->execute([
+            $next_historial_id,
+            $order_id,
+            $_SESSION['user_id'],
+            $estado_anterior,
+            $estado_nuevo,
+            'Detalles del pedido editados desde el panel de administración'
+        ]);
 
         $pdo->commit();
 
-        header("Location: ver.php?id=$id_pedido&success=1");
+        header("Location: ver.php?id=$order_id&success=1");
         exit;
 
     } catch (Exception $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction())
+            $pdo->rollBack();
         $error = $e->getMessage();
     }
 }
@@ -424,21 +414,29 @@ try {
 
                         <div class="form-grid">
                             <div>
-                                <label class="form-label required">Nombre</label>
+                                <label class="form-label required">Nombre del Cliente (Ref)</label>
                                 <input type="text" name="customer_name" class="form-input"
-                                    value="<?php echo htmlspecialchars($order['customer_name']); ?>" required>
+                                    value="<?php echo htmlspecialchars($order['customer_name'] ?? ''); ?>" required>
                             </div>
 
                             <div>
-                                <label class="form-label">Teléfono</label>
+                                <label class="form-label required">Teléfono de Contacto</label>
                                 <input type="tel" name="customer_phone" class="form-input"
-                                    value="<?php echo htmlspecialchars($order['customer_phone'] ?? ''); ?>">
+                                    value="<?php echo htmlspecialchars($order['telefono_contacto'] ?? ''); ?>" required
+                                    maxlength="10">
                             </div>
 
                             <div>
-                                <label class="form-label">Email</label>
-                                <input type="email" name="customer_email" class="form-input"
-                                    value="<?php echo htmlspecialchars($order['customer_email'] ?? ''); ?>">
+                                <label class="form-label required">Dirección de Entrega</label>
+                                <input type="text" name="delivery_address" class="form-input"
+                                    value="<?php echo htmlspecialchars($order['direccion_entrega'] ?? ''); ?>" required>
+                            </div>
+
+                            <div>
+                                <label class="form-label required">Fecha de Entrega</label>
+                                <input type="date" name="delivery_date" class="form-input"
+                                    value="<?php echo date('Y-m-d', strtotime($order['fecha_entrega'] ?? 'now')); ?>"
+                                    required>
                             </div>
                         </div>
                     </div>

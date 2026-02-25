@@ -118,6 +118,12 @@ require_once __DIR__ . '/../../conexion.php';
                     </div>
 
                     <div class="form-group">
+                        <label class="form-label">Teléfono / WhatsApp</label>
+                        <input type="tel" name="telefono" class="form-control" required maxlength="10" minlength="10"
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '');" placeholder="3001234567">
+                    </div>
+
+                    <div class="form-group">
                         <label class="form-label">Contraseña</label>
                         <input type="password" name="password" class="form-control" required placeholder="********">
                     </div>

@@ -101,8 +101,10 @@ try {
     }
 
     // Registrar historial
-    $log = $pdo->prepare("INSERT INTO tbl_historial_pedido (id_pedido, usuario_cambio, estado_anterior, estado_nuevo, motivo) VALUES (?, ?, ?, ?, ?)");
+    $next_historial_id = $pdo->query("SELECT COALESCE(MAX(id_historial), 0) + 1")->fetchColumn();
+    $log = $pdo->prepare("INSERT INTO tbl_historial_pedido (id_historial, id_pedido, usuario_cambio, estado_anterior, estado_nuevo, motivo) VALUES (?, ?, ?, ?, ?, ?)");
     $log->execute([
+        $next_historial_id,
         $id_pedido,
         $_SESSION['user_id'],
         $estado_anterior,

@@ -174,7 +174,7 @@ try {
                     </div>
                     <div class="stat-info">
                         <div class="stat-value">$
-                            <?php echo number_format($stats['total_sales_all'], 0, ',', '.'); ?>
+                            <?php echo number_format($stats['total_sales_all'] ?? 0, 0, ',', '.'); ?>
                         </div>
                         <div class="stat-label">Ventas Totales</div>
                     </div>
@@ -186,7 +186,7 @@ try {
                     </div>
                     <div class="stat-info">
                         <div class="stat-value">$
-                            <?php echo number_format($stats['total_commissions_all'], 0, ',', '.'); ?>
+                            <?php echo number_format($stats['total_commissions_all'] ?? 0, 0, ',', '.'); ?>
                         </div>
                         <div class="stat-label">Comisiones Generadas</div>
                     </div>
@@ -198,7 +198,7 @@ try {
                     </div>
                     <div class="stat-info">
                         <div class="stat-value">$
-                            <?php echo number_format($stats['total_pending_all'], 0, ',', '.'); ?>
+                            <?php echo number_format($stats['total_pending_all'] ?? 0, 0, ',', '.'); ?>
                         </div>
                         <div class="stat-label">Pendiente por Pagar</div>
                     </div>
@@ -278,19 +278,19 @@ try {
                                 <div class="stat-item">
                                     <span class="stat-label">Ventas</span>
                                     <span class="stat-value">$
-                                        <?php echo number_format($seller['total_sales'], 0, ',', '.'); ?>
+                                        <?php echo number_format($seller['total_sales'] ?? 0, 0, ',', '.'); ?>
                                     </span>
                                 </div>
                                 <div class="stat-item">
                                     <span class="stat-label">Comisiones</span>
                                     <span class="stat-value">$
-                                        <?php echo number_format($seller['total_commissions_earned'], 0, ',', '.'); ?>
+                                        <?php echo number_format($seller['total_commissions_earned'] ?? 0, 0, ',', '.'); ?>
                                     </span>
                                 </div>
                                 <div class="stat-item pending">
                                     <span class="stat-label">Pendiente</span>
                                     <span class="stat-value">$
-                                        <?php echo number_format($seller['balance_pending'], 0, ',', '.'); ?>
+                                        <?php echo number_format($seller['balance_pending'] ?? 0, 0, ',', '.'); ?>
                                     </span>
                                 </div>
                             </div>
@@ -304,12 +304,6 @@ try {
                                     title="Editar">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <?php if (!empty($seller['telefono'])): ?>
-                                    <a href="https://wa.me/57<?php echo preg_replace('/[^0-9]/', '', $seller['telefono']); ?>"
-                                        target="_blank" class="btn-action whatsapp" title="WhatsApp">
-                                        <i class="fab fa-whatsapp"></i>
-                                    </a>
-                                <?php endif; ?>
                                 <button class="btn-action delete btn-delete"
                                     data-seller-id="<?php echo $seller['id_miembro']; ?>"
                                     data-seller-name="<?php echo htmlspecialchars($seller['nombre'] . ' ' . $seller['apellido']); ?>"

@@ -669,7 +669,7 @@ $success_message = isset($_GET['success']) ? 'Pedido creado exitosamente' : '';
         </main>
     </div>
 
-    <form id="actionForm" method="POST" action="../../pedidos_acciones.php" style="display:none;">
+    <form id="actionForm" method="POST" action="acciones.php" style="display:none;">
         <input type="hidden" name="id_pedido" value="<?php echo $order_id; ?>">
         <input type="hidden" name="action" id="formAction">
         <input type="hidden" name="notas" id="formNotas">

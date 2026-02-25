@@ -99,7 +99,7 @@ require_once __DIR__ . '/auth.php';
                 <div class="stat-card">
                     <div class="stat-header">
                         <div>
-                            <div class="stat-value"><?php echo number_format($total_orders); ?></div>
+                            <div class="stat-value"><?php echo number_format($total_orders ?? 0); ?></div>
                             <div class="stat-label">Pedidos Totales</div>
                         </div>
                         <div class="stat-icon">
@@ -111,7 +111,8 @@ require_once __DIR__ . '/auth.php';
                 <div class="stat-card">
                     <div class="stat-header">
                         <div>
-                            <div class="stat-value">$<?php echo number_format($monthly_income, 0, ',', '.'); ?></div>
+                            <div class="stat-value">$<?php echo number_format($monthly_income ?? 0, 0, ',', '.'); ?>
+                            </div>
                             <div class="stat-label">Ingresos del Mes</div>
                         </div>
                         <div class="stat-icon">
@@ -139,10 +140,11 @@ require_once __DIR__ . '/auth.php';
                     style="cursor: pointer;">
                     <div class="stat-header">
                         <div>
-                            <div class="stat-value" style="color: #ff6b6b;"><?php echo $pending_comm_count; ?></div>
+                            <div class="stat-value" style="color: #ff6b6b;"><?php echo $pending_comm_count ?? 0; ?>
+                            </div>
                             <div class="stat-label">Comisiones Pendientes</div>
                             <div style="font-size: 0.9rem; color: var(--gray); margin-top: 0.2rem;">
-                                Por pagar: $<?php echo number_format($pending_comm_total, 0, ',', '.'); ?>
+                                Por pagar: $<?php echo number_format($pending_comm_total ?? 0, 0, ',', '.'); ?>
                             </div>
                         </div>
                         <div class="stat-icon" style="background: rgba(255, 107, 107, 0.1); color: #ff6b6b;">
@@ -222,7 +224,7 @@ require_once __DIR__ . '/auth.php';
                                         echo "<td>#" . str_pad($order['id_pedido'], 4, '0', STR_PAD_LEFT) . "</td>";
                                         echo "<td>" . htmlspecialchars(($order['nombre'] ?? 'Admin') . ' ' . ($order['apellido'] ?? '')) . "</td>";
                                         echo "<td>" . date('d/m/Y', strtotime($order['fecha_creacion'])) . "</td>";
-                                        echo "<td>$" . number_format($order['total'], 0, ',', '.') . "</td>";
+                                        echo "<td>$" . number_format($order['total'] ?? 0, 0, ',', '.') . "</td>";
                                         echo "<td><span class='order-status " . ($order['estado'] == 1 ? 'pending' : $status_class) . "' " . ($order['estado'] == 1 ? "style='background:rgba(116, 235, 213, 0.2); color:#0cab9c;'" : "") . ">" . $status_text . "</span></td>";
                                         echo "</tr>";
                                     }

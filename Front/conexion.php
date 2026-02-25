@@ -3,7 +3,7 @@ $host = 'localhost';
 $port = 5432;
 $dbname = 'MaiConnect';
 $user = 'postgres';
-$password = '3205560180'; // Cambia esto si tienes otra contraseña local
+$password = '3205560180';
 
 try {
     $pdo = new PDO(

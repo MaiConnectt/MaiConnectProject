@@ -12,10 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->beginTransaction();
 
         // Get form data
-        $id_cliente = $_POST['customer_id'] ?? null;
-        $nombre_cliente = trim($_POST['customer_name'] ?? '');
+        $nombre_cliente = trim($_POST['customer_name'] ?? ''); // Still capturing name but it's not in schema yet? Wait.
         $telefono_cliente = trim($_POST['customer_phone'] ?? '');
-        $email_cliente = trim($_POST['customer_email'] ?? '');
+        $direccion_entrega = trim($_POST['delivery_address'] ?? '');
+        $fecha_entrega = $_POST['delivery_date'] ?? date('Y-m-d', strtotime('+2 days'));
         $estado_str = $_POST['status'] ?? 'pending';
         $notas = trim($_POST['notes'] ?? '');
         $productos = $_POST['products'] ?? [];
@@ -25,23 +25,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $estado = $estado_map[$estado_str] ?? 0;
 
         // Validate
-        if (empty($nombre_cliente)) {
-            throw new Exception('El nombre del cliente es obligatorio');
+        if (empty($telefono_cliente)) {
+            throw new Exception('El teléfono del cliente es obligatorio');
         }
 
         if (empty($productos)) {
             throw new Exception('Debe agregar al menos un producto');
-        }
-
-        // Create or get customer
-        if (empty($id_cliente)) {
-            // Create new customer
-            $stmt = $pdo->prepare("
-                INSERT INTO tbl_cliente (nombre, telefono, email, fecha_creacion)
-                VALUES (?, ?, ?, NOW())
-            ");
-            $stmt->execute([$nombre_cliente, $telefono_cliente, $email_cliente]);
-            $id_cliente = $pdo->lastInsertId();
         }
 
         // Calculate total and commission
@@ -52,43 +41,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // Get user as optional member
-        $id_miembro = null; // Admin-created orders might not have a member unless assigned
-        $monto_comision = 0;
+        // Generate manual ID for pedido
+        $next_pedido_id = $pdo->query("SELECT COALESCE(MAX(id_pedido), 0) + 1")->fetchColumn();
+        $monto_comision = 0; // Admin order, no initial commission unless assigned
 
         // Create order
         $stmt = $pdo->prepare("
-            INSERT INTO tbl_pedido (id_cliente, estado, notas, fecha_creacion, monto_comision, telefono_contacto)
-            VALUES (?, ?, ?, NOW(), ?, ?)
-            RETURNING id_pedido
+            INSERT INTO tbl_pedido (id_pedido, id_vendedor, estado, notas, fecha_creacion, monto_comision, telefono_contacto, direccion_entrega, fecha_entrega)
+            VALUES (?, NULL, ?, ?, NOW(), ?, ?, ?, ?)
         ");
-        $stmt->execute([$id_cliente, $estado, $notas, $monto_comision, $telefono_cliente]);
-        $id_pedido = $stmt->fetchColumn();
+        $stmt->execute([$next_pedido_id, $estado, $notas, $monto_comision, $telefono_cliente, $direccion_entrega, $fecha_entrega]);
+        $id_pedido = $next_pedido_id;
 
         // Create order items (detail)
-        $stmt = $pdo->prepare("
-            INSERT INTO tbl_detalle_pedido (id_pedido, id_producto, cantidad, precio_unitario)
-            VALUES (?, ?, ?, ?)
+        $stmt_detail = $pdo->prepare("
+            INSERT INTO tbl_detalle_pedido (id_detalle_pedido, id_pedido, id_producto, cantidad, precio_unitario)
+            VALUES (?, ?, ?, ?, ?)
         ");
 
         foreach ($productos as $product) {
-            // Note: Simplification - using product name as is or finding ID
-            // Here the UI uses arbitrary names, but tbl_detalle_pedido expects id_producto
-            // For now, if it's a name, we might need a dummy product or update schema
-            // BUT wait, tbl_producto exists. We should probably find by name or create.
-            // Simplified for now assuming product 0 or creating if missing
+            // Find or create product
             $stmt_prod = $pdo->prepare("SELECT id_producto FROM tbl_producto WHERE nombre_producto = ? LIMIT 1");
             $stmt_prod->execute([$product['name']]);
             $id_producto = $stmt_prod->fetchColumn();
 
             if (!$id_producto) {
-                $stmt_new_prod = $pdo->prepare("INSERT INTO tbl_producto (nombre_producto, precio, stock) VALUES (?, ?, 0) RETURNING id_producto");
-                $stmt_new_prod->execute([$product['name'], $product['price']]);
-                $id_producto = $stmt_new_prod->fetchColumn();
+                $next_prod_id = $pdo->query("SELECT COALESCE(MAX(id_producto), 0) + 1")->fetchColumn();
+                $stmt_new_prod = $pdo->prepare("INSERT INTO tbl_producto (id_producto, nombre_producto, precio, stock, estado) VALUES (?, ?, ?, 0, 'activo')");
+                $stmt_new_prod->execute([$next_prod_id, $product['name'], $product['price']]);
+                $id_producto = $next_prod_id;
             }
 
             if ($id_producto && !empty($product['quantity']) && !empty($product['price'])) {
-                $stmt->execute([
+                $next_detail_id = $pdo->query("SELECT COALESCE(MAX(id_detalle_pedido), 0) + 1")->fetchColumn();
+                $stmt_detail->execute([
+                    $next_detail_id,
                     $id_pedido,
                     $id_producto,
                     $product['quantity'],
@@ -98,8 +85,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Create order history entry
-        $log = $pdo->prepare("INSERT INTO tbl_historial_pedido (id_pedido, usuario_cambio, estado_anterior, estado_nuevo, motivo) VALUES (?, ?, NULL, ?, ?)");
-        $log->execute([$id_pedido, $_SESSION['user_id'], $estado, 'Pedido creado desde el panel de administración']);
+        $next_historial_id = $pdo->query("SELECT COALESCE(MAX(id_historial), 0) + 1")->fetchColumn();
+        $log = $pdo->prepare("INSERT INTO tbl_historial_pedido (id_historial, id_pedido, usuario_cambio, estado_anterior, estado_nuevo, motivo) VALUES (?, ?, ?, NULL, ?, ?)");
+        $log->execute([$next_historial_id, $id_pedido, $_SESSION['user_id'], $estado, 'Pedido creado desde el panel de administración']);
 
         // Commit transaction
         $pdo->commit();
@@ -373,37 +361,24 @@ try {
                         </h2>
 
                         <div class="form-grid">
-                            <div class="form-group-full">
-                                <label class="form-label">Cliente Existente</label>
-                                <select class="form-select" id="existingCustomer">
-                                    <option value="">-- Seleccionar cliente existente --</option>
-                                    <?php foreach ($customers as $customer): ?>
-                                        <option value="<?php echo $customer['id_customer']; ?>"
-                                            data-name="<?php echo htmlspecialchars($customer['name']); ?>"
-                                            data-phone="<?php echo htmlspecialchars($customer['phone']); ?>"
-                                            data-email="<?php echo htmlspecialchars($customer['email']); ?>">
-                                            <?php echo htmlspecialchars($customer['name']); ?> -
-                                            <?php echo htmlspecialchars($customer['phone']); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-
-                            <input type="hidden" name="customer_id" id="customerId">
-
                             <div>
-                                <label class="form-label required">Nombre</label>
-                                <input type="text" name="customer_name" id="customerName" class="form-input" required>
+                                <label class="form-label required">Nombre del Cliente (Ref)</label>
+                                <input type="text" name="customer_name" id="customerName" class="form-input" required placeholder="Ej: Juan Pérez">
                             </div>
 
                             <div>
-                                <label class="form-label">Teléfono</label>
-                                <input type="tel" name="customer_phone" id="customerPhone" class="form-input">
+                                <label class="form-label required">Teléfono de Contacto</label>
+                                <input type="tel" name="customer_phone" id="customerPhone" class="form-input" required maxlength="10" placeholder="Ej: 3001234567">
                             </div>
 
                             <div>
-                                <label class="form-label">Email</label>
-                                <input type="email" name="customer_email" id="customerEmail" class="form-input">
+                                <label class="form-label required">Dirección de Entrega</label>
+                                <input type="text" name="delivery_address" class="form-input" required placeholder="Ej: Calle 123 #45-67">
+                            </div>
+
+                            <div>
+                                <label class="form-label required">Fecha de Entrega</label>
+                                <input type="date" name="delivery_date" class="form-input" required min="<?php echo date('Y-m-d'); ?>">
                             </div>
                         </div>
                     </div>

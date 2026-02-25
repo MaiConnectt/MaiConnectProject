@@ -9,15 +9,18 @@ try {
 
     $stats_query = "
         SELECT 
-            (SELECT COUNT(*) FROM tbl_pedido WHERE id_vendedor = ? AND estado != 3) as total_orders,
-            COALESCE((SELECT SUM(ot.total) FROM tbl_pedido o JOIN vw_totales_pedido ot ON o.id_pedido = ot.id_pedido WHERE o.id_vendedor = ? AND o.estado = 2), 0) as total_sales,
-            COALESCE((SELECT SUM(monto_comision) FROM tbl_pedido WHERE id_vendedor = ? AND estado = 2), 0) as commissions_earned,
-            COALESCE((SELECT SUM(monto_comision) FROM tbl_pedido WHERE id_vendedor = ? AND estado = 2 AND id_pago_comision IS NOT NULL), 0) as total_paid,
-            COALESCE((SELECT SUM(monto_comision) FROM tbl_pedido WHERE id_vendedor = ? AND estado = 2 AND id_pago_comision IS NULL), 0) as balance_pending
+            COUNT(o.id_pedido) FILTER (WHERE o.estado != 3) as total_orders,
+            SUM(ot.total) FILTER (WHERE o.estado = 2) as total_sales,
+            SUM(o.monto_comision) FILTER (WHERE o.estado = 2) as commissions_earned,
+            SUM(o.monto_comision) FILTER (WHERE o.estado = 2 AND o.id_pago_comision IS NOT NULL) as total_paid,
+            SUM(o.monto_comision) FILTER (WHERE o.estado = 2 AND o.id_pago_comision IS NULL) as balance_pending
+        FROM tbl_pedido o
+        LEFT JOIN vw_totales_pedido ot ON o.id_pedido = ot.id_pedido
+        WHERE o.id_vendedor = ?
     ";
 
     $stmt = $pdo->prepare($stats_query);
-    $stmt->execute([$seller_id, $seller_id, $seller_id, $seller_id, $seller_id]);
+    $stmt->execute([$seller_id]);
     $stats = $stmt->fetch();
 
     if (!$stats) {
@@ -119,7 +122,7 @@ function getStatusBadge($status)
                     <div class="stat-header">
                         <div>
                             <div class="stat-value">$
-                                <?php echo number_format($stats['total_sales'], 0, ',', '.'); ?>
+                                <?php echo number_format($stats['total_sales'] ?? 0, 0, ',', '.'); ?>
                             </div>
                             <div class="stat-label">Ventas Totales</div>
                         </div>
@@ -137,7 +140,7 @@ function getStatusBadge($status)
                     <div class="stat-header">
                         <div>
                             <div class="stat-value">$
-                                <?php echo number_format($stats['commissions_earned'], 0, ',', '.'); ?>
+                                <?php echo number_format($stats['commissions_earned'] ?? 0, 0, ',', '.'); ?>
                             </div>
                             <div class="stat-label">Comisiones Ganadas</div>
                         </div>
@@ -155,7 +158,7 @@ function getStatusBadge($status)
                     <div class="stat-header">
                         <div>
                             <div class="stat-value">$
-                                <?php echo number_format($stats['total_paid'], 0, ',', '.'); ?>
+                                <?php echo number_format($stats['total_paid'] ?? 0, 0, ',', '.'); ?>
                             </div>
                             <div class="stat-label">Total Pagado</div>
                         </div>
@@ -169,7 +172,7 @@ function getStatusBadge($status)
                     <div class="stat-header">
                         <div>
                             <div class="stat-value">$
-                                <?php echo number_format($stats['balance_pending'], 0, ',', '.'); ?>
+                                <?php echo number_format($stats['balance_pending'] ?? 0, 0, ',', '.'); ?>
                             </div>
                             <div class="stat-label">Pendiente por Cobrar</div>
                         </div>
@@ -239,11 +242,11 @@ function getStatusBadge($status)
                                         <?php echo date('d/m/Y', strtotime($order['fecha_creacion'])); ?>
                                     </td>
                                     <td>$
-                                        <?php echo number_format($order['total'], 0, ',', '.'); ?>
+                                        <?php echo number_format($order['total'] ?? 0, 0, ',', '.'); ?>
                                     </td>
                                     <td style="color: var(--success); font-weight: 600;">
                                         $
-                                        <?php echo number_format($order['commission'], 0, ',', '.'); ?>
+                                        <?php echo number_format($order['commission'] ?? 0, 0, ',', '.'); ?>
                                     </td>
                                     <td>
                                         <?php echo getStatusBadge($order['estado']); ?>
