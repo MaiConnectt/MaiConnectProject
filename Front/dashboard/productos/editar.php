@@ -112,7 +112,7 @@ if (!$product) {
             <div class="form-container">
                 <h2 class="form-title"><i class="fas fa-edit" style="color: var(--primary);"></i> Editar Producto</h2>
 
-                <form id="productEditForm">
+                <form id="productEditForm" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="edit">
                     <input type="hidden" name="id_producto" value="<?php echo $product['id_producto']; ?>">
 
@@ -139,6 +139,19 @@ if (!$product) {
                             <input type="number" name="stock" class="form-control" required min="0"
                                 value="<?php echo intval($product['stock']); ?>">
                         </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Imagen del Producto (Opcional)</label>
+                        <?php if (!empty($product['imagen_principal'])): ?>
+                            <div style="margin-bottom: 10px;">
+                                <img src="../../<?php echo htmlspecialchars($product['imagen_principal']); ?>"
+                                    alt="Imagen actual" style="max-width: 150px; border-radius: 8px;">
+                                <p style="font-size: 0.8rem; color: var(--gray-500); margin-top: 5px;">Sube una nueva foto
+                                    para reemplazar la actual.</p>
+                            </div>
+                        <?php endif; ?>
+                        <input type="file" name="imagen" class="form-control" accept="image/*">
                     </div>
 
                     <div class="form-group">

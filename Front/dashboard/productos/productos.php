@@ -70,6 +70,7 @@ $query = "
         descripcion as short_description,
         precio as price,
         stock,
+        imagen_principal as main_image,
         estado
     FROM tbl_producto
     $where_clause
@@ -197,7 +198,7 @@ $categories = []; // Placeholder si no hay tabla de categorías vinculada aún
                             <!-- Product Image -->
                             <div class="product-image-container">
                                 <?php if (!empty($product['main_image'])): ?>
-                                    <img src="../../uploads/productos/<?php echo htmlspecialchars($product['main_image']); ?>"
+                                    <img src="../../<?php echo htmlspecialchars($product['main_image']); ?>"
                                         alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-image">
                                 <?php else: ?>
                                     <div class="product-image-placeholder">

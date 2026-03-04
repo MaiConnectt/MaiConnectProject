@@ -98,7 +98,7 @@ require_once __DIR__ . '/../../conexion.php';
                 <h2 class="form-title"><i class="fas fa-plus-circle" style="color: var(--primary);"></i> Nuevo Producto
                 </h2>
 
-                <form id="productForm">
+                <form id="productForm" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="create">
 
                     <div class="form-group">
@@ -123,6 +123,11 @@ require_once __DIR__ . '/../../conexion.php';
                             <label class="form-label">Stock Inicial</label>
                             <input type="number" name="stock" class="form-control" required min="0" value="0">
                         </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Imagen del Producto (Opcional)</label>
+                        <input type="file" name="imagen" class="form-control" accept="image/*">
                     </div>
 
                     <div class="form-group">

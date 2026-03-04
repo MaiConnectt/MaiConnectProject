@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../auth.php';
 require_once __DIR__ . '/../../conexion.php';
+require_once __DIR__ . '/../../../Back/funciones/utilidades.php';
 
 // Pagination settings
 $records_per_page = 12;
@@ -36,7 +37,7 @@ $where_clause = !empty($where_conditions) ? 'WHERE ' . implode(' AND ', $where_c
 
 // Get total count for pagination
 $count_query = "
-    SELECT COUNT(*) as total
+    SELECT COUNT(m.id_miembro) as total
     FROM tbl_miembro m
     INNER JOIN tbl_usuario u ON m.id_usuario = u.id_usuario
     $where_clause
@@ -64,7 +65,7 @@ $query = "
         m.porcentaje_comision,
         m.estado,
         m.fecha_contratacion,
-        (SELECT COUNT(*) FROM tbl_pedido o WHERE o.id_vendedor = m.id_miembro AND o.estado = 2) as total_orders,
+        (SELECT COUNT(o.id_pedido) FROM tbl_pedido o WHERE o.id_vendedor = m.id_miembro AND o.estado = 2) as total_orders,
         (SELECT COALESCE(SUM(ot.total),0) FROM tbl_pedido o JOIN vw_totales_pedido ot ON o.id_pedido = ot.id_pedido WHERE o.id_vendedor = m.id_miembro AND o.estado = 2) as total_sales,
         (SELECT COALESCE(SUM(monto_comision),0) FROM tbl_pedido o WHERE o.id_vendedor = m.id_miembro AND o.estado = 2) as total_commissions_earned,
         (SELECT COALESCE(SUM(monto_comision),0) FROM tbl_pedido o WHERE o.id_vendedor = m.id_miembro AND o.estado = 2 AND o.id_pago_comision IS NOT NULL) as total_paid,
@@ -89,7 +90,7 @@ try {
 try {
     $stats_query = "
         SELECT 
-            COUNT(*) as total_sellers,
+            COUNT(id_miembro) as total_sellers,
             COUNT(CASE WHEN estado = 'activo' THEN 1 END) as active_sellers,
             COALESCE((SELECT SUM(ot.total) FROM tbl_pedido o JOIN vw_totales_pedido ot ON o.id_pedido = ot.id_pedido WHERE o.estado = 2), 0) as total_sales_all,
             COALESCE((SELECT SUM(monto_comision) FROM tbl_pedido WHERE estado = 2), 0) as total_commissions_all,
@@ -173,8 +174,8 @@ try {
                         <i class="fas fa-dollar-sign"></i>
                     </div>
                     <div class="stat-info">
-                        <div class="stat-value">$
-                            <?php echo number_format($stats['total_sales_all'] ?? 0, 0, ',', '.'); ?>
+                        <div class="stat-value">
+                            <?php echo formato_moneda($stats['total_sales_all'] ?? 0); ?>
                         </div>
                         <div class="stat-label">Ventas Totales</div>
                     </div>
@@ -185,8 +186,8 @@ try {
                         <i class="fas fa-percentage"></i>
                     </div>
                     <div class="stat-info">
-                        <div class="stat-value">$
-                            <?php echo number_format($stats['total_commissions_all'] ?? 0, 0, ',', '.'); ?>
+                        <div class="stat-value">
+                            <?php echo formato_moneda($stats['total_commissions_all'] ?? 0); ?>
                         </div>
                         <div class="stat-label">Comisiones Generadas</div>
                     </div>
@@ -197,8 +198,8 @@ try {
                         <i class="fas fa-clock"></i>
                     </div>
                     <div class="stat-info">
-                        <div class="stat-value">$
-                            <?php echo number_format($stats['total_pending_all'] ?? 0, 0, ',', '.'); ?>
+                        <div class="stat-value">
+                            <?php echo formato_moneda($stats['total_pending_all'] ?? 0); ?>
                         </div>
                         <div class="stat-label">Pendiente por Pagar</div>
                     </div>
@@ -277,20 +278,20 @@ try {
                             <div class="seller-stats">
                                 <div class="stat-item">
                                     <span class="stat-label">Ventas</span>
-                                    <span class="stat-value">$
-                                        <?php echo number_format($seller['total_sales'] ?? 0, 0, ',', '.'); ?>
+                                    <span class="stat-value">
+                                        <?php echo formato_moneda($seller['total_sales'] ?? 0); ?>
                                     </span>
                                 </div>
                                 <div class="stat-item">
                                     <span class="stat-label">Comisiones</span>
-                                    <span class="stat-value">$
-                                        <?php echo number_format($seller['total_commissions_earned'] ?? 0, 0, ',', '.'); ?>
+                                    <span class="stat-value">
+                                        <?php echo formato_moneda($seller['total_commissions_earned'] ?? 0); ?>
                                     </span>
                                 </div>
                                 <div class="stat-item pending">
                                     <span class="stat-label">Pendiente</span>
-                                    <span class="stat-value">$
-                                        <?php echo number_format($seller['balance_pending'] ?? 0, 0, ',', '.'); ?>
+                                    <span class="stat-value">
+                                        <?php echo formato_moneda($seller['balance_pending'] ?? 0); ?>
                                     </span>
                                 </div>
                             </div>

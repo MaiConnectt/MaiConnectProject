@@ -38,10 +38,7 @@
                 <a href="#productos" class="nav-link">Productos</a>
                 <a href="#galeria" class="nav-link">Galería</a>
                 <a href="#contacto" class="nav-link">Contacto</a>
-                <a href="https://wa.me/573244917185?text=Hola%20Mai,%20quiero%20hacer%20un%20pedido"
-                    class="btn-whatsapp-nav" target="_blank">
-                    <i class="fab fa-whatsapp"></i> Pedir Ahora
-                </a>
+
                 <a href="Front/login/login.php" class="nav-link" style="margin-left: 10px;">
                     <i class="fas fa-user"></i> Iniciar Sesión
                 </a>
@@ -71,10 +68,7 @@
                 <a href="#productos" class="btn btn-primary">
                     <i class="fas fa-cookie-bite"></i> Ver Productos
                 </a>
-                <a href="https://wa.me/573244917185?text=Hola%20Mai,%20quiero%20información" class="btn btn-secondary"
-                    target="_blank">
-                    <i class="fab fa-whatsapp"></i> Contáctanos
-                </a>
+
             </div>
         </div>
         <div class="scroll-indicator">
@@ -457,10 +451,7 @@
                         <i class="fab fa-whatsapp"></i>
                         <h3>¿Listo para hacer tu pedido?</h3>
                         <p>Chatea con nosotros en WhatsApp y te ayudaremos a crear el postre perfecto</p>
-                        <a href="https://wa.me/573244917185?text=Hola%20Mai,%20quiero%20hacer%20un%20pedido"
-                            class="btn btn-whatsapp" target="_blank">
-                            <i class="fab fa-whatsapp"></i> Chatear Ahora
-                        </a>
+
                     </div>
                 </div>
             </div>

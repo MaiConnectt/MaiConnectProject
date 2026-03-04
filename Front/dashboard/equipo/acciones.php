@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../auth.php';
 require_once __DIR__ . '/../../conexion.php';
+require_once __DIR__ . '/../../../Back/funciones/utilidades.php';
 
 header('Content-Type: application/json');
 
@@ -14,15 +15,20 @@ $action = $_POST['action'] ?? '';
 try {
     switch ($action) {
         case 'create':
+            $nombre = limpiar_cadena($_POST['nombre'] ?? '');
+            $apellido = limpiar_cadena($_POST['apellido'] ?? '');
+            $email = limpiar_cadena($_POST['email'] ?? '');
+            $password = limpiar_cadena($_POST['password'] ?? '');
             $comision = floatval($_POST['comision'] ?? 5.0);
             $estado = $_POST['status'] ?? ($_POST['estado'] ?? 'activo');
-            $telefono = trim($_POST['telefono'] ?? '');
+            $telefono = limpiar_cadena($_POST['telefono'] ?? '');
+            $universidad = limpiar_cadena($_POST['universidad'] ?? '');
 
             if (empty($nombre) || empty($email) || empty($password) || empty($telefono)) {
                 throw new Exception("Nombre, Email, Teléfono y Contraseña son obligatorios");
             }
 
-            if (!preg_match('/^[0-9]{10}$/', $telefono)) {
+            if (!validar_telefono($telefono)) {
                 throw new Exception("El teléfono debe tener exactamente 10 dígitos numéricos");
             }
 
@@ -43,9 +49,12 @@ try {
             $stmt = $pdo->prepare("INSERT INTO tbl_usuario (id_usuario, nombre, apellido, email, contrasena, id_rol) VALUES (?, ?, ?, ?, ?, 2)");
             $stmt->execute([$next_user, $nombre, $apellido, $email, password_hash($password, PASSWORD_BCRYPT)]);
 
+            // Estado numerico para id_estado_miembro
+            $id_estado_miembro = ($estado === 'activo') ? 1 : 2;
+
             // Insert into tbl_miembro
-            $stmt = $pdo->prepare("INSERT INTO tbl_miembro (id_miembro, id_usuario, porcentaje_comision, estado, telefono, fecha_contratacion) VALUES (?, ?, ?, ?, ?, CURRENT_DATE)");
-            $stmt->execute([$next_member, $next_user, $comision, $estado, $telefono]);
+            $stmt = $pdo->prepare("INSERT INTO tbl_miembro (id_miembro, id_usuario, porcentaje_comision, estado, telefono, id_estado_miembro, fecha_contratacion, universidad) VALUES (?, ?, ?, ?, ?, ?, CURRENT_DATE, ?)");
+            $stmt->execute([$next_member, $next_user, $comision, $estado, $telefono, $id_estado_miembro, $universidad]);
 
             $pdo->commit();
             echo json_encode(['success' => true, 'message' => 'Vendedor creado exitosamente']);
@@ -53,18 +62,18 @@ try {
 
         case 'edit':
             $id_miembro = intval($_POST['id_miembro'] ?? 0);
-            $nombre = trim($_POST['nombre'] ?? '');
-            $apellido = trim($_POST['apellido'] ?? '');
-            $email = trim($_POST['email'] ?? '');
+            $nombre = limpiar_cadena($_POST['nombre'] ?? '');
+            $apellido = limpiar_cadena($_POST['apellido'] ?? '');
+            $email = limpiar_cadena($_POST['email'] ?? '');
             $comision = floatval($_POST['comision'] ?? 0);
             $estado = $_POST['estado'] ?? 'activo';
-            $telefono = trim($_POST['telefono'] ?? '');
+            $telefono = limpiar_cadena($_POST['telefono'] ?? '');
 
             if (!$id_miembro || empty($nombre) || empty($email) || empty($telefono)) {
                 throw new Exception("Datos incompletos (Nombre, Email y Teléfono son obligatorios)");
             }
 
-            if (!preg_match('/^[0-9]{10}$/', $telefono)) {
+            if (!validar_telefono($telefono)) {
                 throw new Exception("El teléfono debe tener exactamente 10 dígitos numéricos");
             }
 

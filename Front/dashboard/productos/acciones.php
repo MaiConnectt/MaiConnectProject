@@ -24,11 +24,28 @@ try {
                 throw new Exception("Nombre y Precio son obligatorios");
             }
 
+            // Procesar la subida de la imagen si se envió una
+            $ruta_imagen = null;
+            if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
+                $upload_dir = __DIR__ . '/../../uploads/productos/';
+                if (!is_dir($upload_dir)) {
+                    mkdir($upload_dir, 0777, true); // Crear directorio si no existe
+                }
+
+                $file_extension = strtolower(pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION));
+                $new_filename = 'prod_' . time() . '_' . rand(1000, 9999) . '.' . $file_extension;
+                $destination = $upload_dir . $new_filename;
+
+                if (move_uploaded_file($_FILES['imagen']['tmp_name'], $destination)) {
+                    $ruta_imagen = 'uploads/productos/' . $new_filename;
+                }
+            }
+
             // Get next ID
             $next_id = $pdo->query("SELECT COALESCE(MAX(id_producto), 0) + 1 FROM tbl_producto")->fetchColumn();
 
-            $stmt = $pdo->prepare("INSERT INTO tbl_producto (id_producto, nombre_producto, descripcion, precio, stock, estado, fecha_creacion, fecha_actualizacion) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
-            $stmt->execute([$next_id, $nombre, $descripcion, $precio, $stock, $estado]);
+            $stmt = $pdo->prepare("INSERT INTO tbl_producto (id_producto, nombre_producto, descripcion, precio, stock, estado, imagen_principal, fecha_creacion, fecha_actualizacion) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+            $stmt->execute([$next_id, $nombre, $descripcion, $precio, $stock, $estado, $ruta_imagen]);
 
             echo json_encode(['success' => true, 'message' => 'Producto creado exitosamente']);
             break;
@@ -45,8 +62,30 @@ try {
                 throw new Exception("Datos incompletos o inválidos");
             }
 
-            $stmt = $pdo->prepare("UPDATE tbl_producto SET nombre_producto = ?, descripcion = ?, precio = ?, stock = ?, estado = ?, fecha_actualizacion = CURRENT_TIMESTAMP WHERE id_producto = ?");
-            $stmt->execute([$nombre, $descripcion, $precio, $stock, $estado, $id_producto]);
+            // Procesar la subida de la imagen si se envió una
+            $ruta_imagen = null;
+            if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
+                $upload_dir = __DIR__ . '/../../uploads/productos/';
+                if (!is_dir($upload_dir)) {
+                    mkdir($upload_dir, 0777, true);
+                }
+
+                $file_extension = strtolower(pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION));
+                $new_filename = 'prod_' . time() . '_' . rand(1000, 9999) . '.' . $file_extension;
+                $destination = $upload_dir . $new_filename;
+
+                if (move_uploaded_file($_FILES['imagen']['tmp_name'], $destination)) {
+                    $ruta_imagen = 'uploads/productos/' . $new_filename;
+                }
+            }
+
+            if ($ruta_imagen) {
+                $stmt = $pdo->prepare("UPDATE tbl_producto SET nombre_producto = ?, descripcion = ?, precio = ?, stock = ?, estado = ?, imagen_principal = ?, fecha_actualizacion = CURRENT_TIMESTAMP WHERE id_producto = ?");
+                $stmt->execute([$nombre, $descripcion, $precio, $stock, $estado, $ruta_imagen, $id_producto]);
+            } else {
+                $stmt = $pdo->prepare("UPDATE tbl_producto SET nombre_producto = ?, descripcion = ?, precio = ?, stock = ?, estado = ?, fecha_actualizacion = CURRENT_TIMESTAMP WHERE id_producto = ?");
+                $stmt->execute([$nombre, $descripcion, $precio, $stock, $estado, $id_producto]);
+            }
 
             echo json_encode(['success' => true, 'message' => 'Producto actualizado exitosamente']);
             break;

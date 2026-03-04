@@ -4,7 +4,6 @@ $port = 5432;
 $dbname = 'MaiConnect';
 $user = 'postgres';
 $password = '3205560180';
-
 try {
     $pdo = new PDO(
         "pgsql:host=$host;port=$port;dbname=$dbname",
