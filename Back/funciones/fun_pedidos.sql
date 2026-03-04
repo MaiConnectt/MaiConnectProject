@@ -49,7 +49,7 @@ BEGIN
     );
 
     -- 4. Procesar Detalle de Pedidos y Productos Dinámicos (Loop JSON)
-    FOR v_producto IN SELECT * FROM json_array_elements(p_productos)
+    FOR v_producto IN SELECT value FROM json_array_elements(p_productos)
     LOOP
         v_prod_name := v_producto->>'name';
         v_prod_qty := (v_producto->>'quantity')::INTEGER;
@@ -78,10 +78,8 @@ BEGIN
     END LOOP;
 
     -- 5. Registrar en el Historial de Cambios del Pedido
-    SELECT COALESCE(MAX(id_historial), 0) + 1 INTO v_id_historial FROM tbl_historial_pedido;
-    
-    INSERT INTO tbl_historial_pedido (id_historial, id_pedido, usuario_cambio, estado_anterior, estado_nuevo, motivo) 
-    VALUES (v_id_historial, v_id_pedido, p_id_usuario_ejecutor, NULL, p_estado, 'Pedido creado desde el panel de administración');
+    INSERT INTO tbl_historial_pedido (id_pedido, usuario_cambio, estado_anterior, estado_nuevo, motivo) 
+    VALUES (v_id_pedido, p_id_usuario_ejecutor, NULL, p_estado, 'Pedido creado desde el panel de administración');
 
     -- 6. Respuesta existosa a PHP
     RETURN json_build_object('success', true, 'message', 'Pedido creado exitosamente', 'id_pedido', v_id_pedido);

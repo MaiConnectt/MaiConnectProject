@@ -63,9 +63,8 @@ try {
             $commission_amount = $total_order_amount * ($commission_percentage / 100);
             $pdo->prepare("UPDATE tbl_pedido SET monto_comision = ? WHERE id_pedido = ?")->execute([$commission_amount, $next_order_id]);
 
-            $next_historial_id = $pdo->query("SELECT COALESCE(MAX(id_historial), 0) + 1 as next_id FROM tbl_historial_pedido")->fetch()['next_id'];
-            $pdo->prepare("INSERT INTO tbl_historial_pedido (id_historial, id_pedido, usuario_cambio, estado_anterior, estado_nuevo, motivo) VALUES (?, ?, ?, NULL, 0, 'Pedido creado por el vendedor')")
-                ->execute([$next_historial_id, $next_order_id, $user_id]);
+            $pdo->prepare("INSERT INTO tbl_historial_pedido (id_pedido, usuario_cambio, estado_anterior, estado_nuevo, motivo) VALUES (?, ?, NULL, 0, 'Pedido creado por el vendedor')")
+                ->execute([$next_order_id, $user_id]);
 
             $pdo->commit();
             $_SESSION['success'] = "¡Pedido #" . str_pad($next_order_id, 4, '0', STR_PAD_LEFT) . " creado exitosamente!";
@@ -134,9 +133,8 @@ try {
 
             $pdo->beginTransaction();
             $pdo->prepare("UPDATE tbl_pedido SET estado = 2 WHERE id_pedido = ?")->execute([$id_pedido]);
-            $next_historial_id = $pdo->query("SELECT COALESCE(MAX(id_historial), 0) + 1 as next_id FROM tbl_historial_pedido")->fetch()['next_id'];
-            $pdo->prepare("INSERT INTO tbl_historial_pedido (id_historial, id_pedido, usuario_cambio, estado_anterior, estado_nuevo, motivo) VALUES (?, ?, ?, 1, 2, 'Marcado como completado por el vendedor')")
-                ->execute([$next_historial_id, $id_pedido, $user_id]);
+            $pdo->prepare("INSERT INTO tbl_historial_pedido (id_pedido, usuario_cambio, estado_anterior, estado_nuevo, motivo) VALUES (?, ?, 1, 2, 'Marcado como completado por el vendedor')")
+                ->execute([$id_pedido, $user_id]);
             $pdo->commit();
 
             $_SESSION['success'] = "¡Pedido #" . str_pad($id_pedido, 4, '0', STR_PAD_LEFT) . " marcado como completado!";

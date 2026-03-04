@@ -32,31 +32,28 @@ try {
                 throw new Exception("El teléfono debe tener exactamente 10 dígitos numéricos");
             }
 
-            $pdo->beginTransaction();
+            // Call PostgreSQL function to create user + member in one transaction
+            $stmt = $pdo->prepare("SELECT fun_crear_vendedor(?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([
+                $nombre,
+                $apellido,
+                $email,
+                password_hash($password, PASSWORD_BCRYPT),
+                $telefono,
+                $universidad,
+                $comision,
+                $estado
+            ]);
 
-            // Check email
-            $check = $pdo->prepare("SELECT id_usuario FROM tbl_usuario WHERE email = ?");
-            $check->execute([$email]);
-            if ($check->fetch()) {
-                throw new Exception("El email ya está registrado");
+            // function returns a JSON string, parsing it to handle success/error
+            $resultado_json = $stmt->fetchColumn();
+            $resultado = json_decode($resultado_json, true);
+
+            if (!$resultado || !$resultado['success']) {
+                $msg = $resultado['message'] ?? 'Error desconocido en la base de datos';
+                throw new Exception($msg);
             }
 
-            // Get next IDs
-            $next_user = $pdo->query("SELECT COALESCE(MAX(id_usuario), 0) + 1 FROM tbl_usuario")->fetchColumn();
-            $next_member = $pdo->query("SELECT COALESCE(MAX(id_miembro), 0) + 1 FROM tbl_miembro")->fetchColumn();
-
-            // Insert into tbl_usuario
-            $stmt = $pdo->prepare("INSERT INTO tbl_usuario (id_usuario, nombre, apellido, email, contrasena, id_rol) VALUES (?, ?, ?, ?, ?, 2)");
-            $stmt->execute([$next_user, $nombre, $apellido, $email, password_hash($password, PASSWORD_BCRYPT)]);
-
-            // Estado numerico para id_estado_miembro
-            $id_estado_miembro = ($estado === 'activo') ? 1 : 2;
-
-            // Insert into tbl_miembro
-            $stmt = $pdo->prepare("INSERT INTO tbl_miembro (id_miembro, id_usuario, porcentaje_comision, estado, telefono, id_estado_miembro, fecha_contratacion, universidad) VALUES (?, ?, ?, ?, ?, ?, CURRENT_DATE, ?)");
-            $stmt->execute([$next_member, $next_user, $comision, $estado, $telefono, $id_estado_miembro, $universidad]);
-
-            $pdo->commit();
             echo json_encode(['success' => true, 'message' => 'Vendedor creado exitosamente']);
             break;
 
@@ -77,25 +74,26 @@ try {
                 throw new Exception("El teléfono debe tener exactamente 10 dígitos numéricos");
             }
 
-            $pdo->beginTransaction();
+            // Call PostgreSQL function to edit user + member in one transaction
+            $stmt = $pdo->prepare("SELECT fun_editar_vendedor(?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([
+                $id_miembro,
+                $nombre,
+                $apellido,
+                $email,
+                $telefono,
+                $comision,
+                $estado
+            ]);
 
-            // Get user ID
-            $stmt = $pdo->prepare("SELECT id_usuario FROM tbl_miembro WHERE id_miembro = ?");
-            $stmt->execute([$id_miembro]);
-            $id_usuario = $stmt->fetchColumn();
+            $resultado_json = $stmt->fetchColumn();
+            $resultado = json_decode($resultado_json, true);
 
-            if (!$id_usuario)
-                throw new Exception("Vendedor no encontrado");
+            if (!$resultado || !$resultado['success']) {
+                $msg = $resultado['message'] ?? 'Error desconocido al actualizar en base de datos';
+                throw new Exception($msg);
+            }
 
-            // Update tbl_usuario
-            $stmt = $pdo->prepare("UPDATE tbl_usuario SET nombre = ?, apellido = ?, email = ? WHERE id_usuario = ?");
-            $stmt->execute([$nombre, $apellido, $email, $id_usuario]);
-
-            // Update tbl_miembro
-            $stmt = $pdo->prepare("UPDATE tbl_miembro SET porcentaje_comision = ?, estado = ?, telefono = ? WHERE id_miembro = ?");
-            $stmt->execute([$comision, $estado, $telefono, $id_miembro]);
-
-            $pdo->commit();
             echo json_encode(['success' => true, 'message' => 'Vendedor actualizado exitosamente']);
             break;
 
@@ -104,25 +102,19 @@ try {
             if (!$id_miembro)
                 throw new Exception("ID inválido");
 
-            // 1. Validar si el vendedor tiene pedidos asociados
-            $check_orders = $pdo->prepare("SELECT COUNT(*) FROM tbl_pedido WHERE id_vendedor = ?");
-            $check_orders->execute([$id_miembro]);
-            if ($check_orders->fetchColumn() > 0) {
-                throw new Exception("No se puede eliminar porque tiene pedidos asociados. El vendedor será desactivado.");
-            }
-
-            // 2. Validar si tiene pagos de comisión registrados
-            $check_payments = $pdo->prepare("SELECT COUNT(*) FROM tbl_pago_comision WHERE id_vendedor = ?");
-            $check_payments->execute([$id_miembro]);
-            if ($check_payments->fetchColumn() > 0) {
-                throw new Exception("No se puede eliminar porque tiene pagos de comisión registrados. El vendedor será desactivado.");
-            }
-
-            // 3. Aplicar Eliminación Lógica (Soft Delete) - SIEMPRE, según requerimiento de eliminar DELETE físico
-            $stmt = $pdo->prepare("UPDATE tbl_miembro SET estado = 'inactivo' WHERE id_miembro = ?");
+            // Ejecuta función en base de datos para validar y borrar lógicamente
+            $stmt = $pdo->prepare("SELECT fun_desactivar_vendedor(?)");
             $stmt->execute([$id_miembro]);
 
-            echo json_encode(['success' => true, 'message' => 'Vendedor desactivado exitosamente (Eliminación lógica)']);
+            $resultado_json = $stmt->fetchColumn();
+            $resultado = json_decode($resultado_json, true);
+
+            if (!$resultado || !$resultado['success']) {
+                $msg = $resultado['message'] ?? 'Error desconocido al eliminar el vendedor';
+                throw new Exception($msg);
+            }
+
+            echo json_encode(['success' => true, 'message' => $resultado['message']]);
             break;
 
         default:

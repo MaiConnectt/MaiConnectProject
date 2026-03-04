@@ -169,7 +169,7 @@ CREATE TABLE tbl_comprobante_pago (
 
 -- Trazabilidad de los estados de un pedido
 CREATE TABLE tbl_historial_pedido (
-    id_historial    INTEGER            PRIMARY KEY,          -- ID del registro histórico
+    id_historial    SERIAL             PRIMARY KEY,          -- ID del registro histórico (SERIAL previene colisiones)
     id_pedido       INTEGER            NOT NULL REFERENCES tbl_pedido(id_pedido) ON DELETE RESTRICT,
     estado_anterior INTEGER,                                 -- Estado antes del cambio
     estado_nuevo    INTEGER            NOT NULL,             -- Estado al que pasó
@@ -315,9 +315,8 @@ CREATE OR REPLACE FUNCTION registrar_cambio_estado_pedido() RETURNS TRIGGER AS $
 DECLARE v_next_id INTEGER;
 BEGIN
     IF OLD.estado IS DISTINCT FROM NEW.estado THEN
-        SELECT COALESCE(MAX(id_historial), 0) + 1 INTO v_next_id FROM tbl_historial_pedido;
-        INSERT INTO tbl_historial_pedido (id_historial, id_pedido, estado_anterior, estado_nuevo, motivo)
-        VALUES (v_next_id, NEW.id_pedido, OLD.estado, NEW.estado, 'Cambio automático');
+        INSERT INTO tbl_historial_pedido (id_pedido, estado_anterior, estado_nuevo, motivo)
+        VALUES (NEW.id_pedido, OLD.estado, NEW.estado, 'Cambio automático');
     END IF;
     RETURN NEW;
 END; $$ LANGUAGE plpgsql;
@@ -328,7 +327,7 @@ CREATE OR REPLACE FUNCTION calcular_comision_pedido() RETURNS TRIGGER AS $$
 DECLARE v_total DECIMAL(10,2); v_porc DECIMAL(5,2);
 BEGIN
     IF OLD.estado IS DISTINCT FROM NEW.estado AND NEW.estado = 2 AND (NEW.monto_comision IS NULL OR NEW.monto_comision = 0) THEN
-        SELECT COALESCE(SUM(cantidad * precio_unitario), 0) INTO v_total FROM tbl_detalle_pedido WHERE id_pedido = NEW.id_pedido;
+        SELECT COALESCE(SUM(cantidad * precio_unitario), 0) INTO v_total FROM tbl_detalle_pedido WHERE id_pedido = NEW.id_pedido AND estado = 'activo';
         IF v_total > 0 AND NEW.id_vendedor IS NOT NULL THEN
             SELECT porcentaje_comision INTO v_porc FROM tbl_miembro WHERE id_miembro = NEW.id_vendedor;
             IF v_porc IS NOT NULL THEN NEW.monto_comision := ROUND(v_total * v_porc / 100, 2); END IF;

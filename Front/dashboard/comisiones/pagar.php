@@ -110,8 +110,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              throw new Exception("No hay pedidos para pagar.");
         }
 
-        $pdo->beginTransaction();
-
         $notes = $_POST['notes'] ?? '';
         $payment_amount = $total_commission;
         $proof_path = null;
@@ -133,40 +131,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        // 2. Insert Payment Record
-        // id_vendedor (tbl_pago_comision) -> id_miembro
-        $next_payout_id = $pdo->query("SELECT COALESCE(MAX(id_pago_comision), 0) + 1 as next_id FROM tbl_pago_comision")->fetch()['next_id'];
-        $stmt_pay = $pdo->prepare("
-            INSERT INTO tbl_pago_comision (id_pago_comision, id_vendedor, monto, ruta_archivo, estado, notas, fecha_pago)
-            VALUES (?, ?, ?, ?, 'completado', ?, NOW())
-        ");
-        $stmt_pay->execute([$next_payout_id, $id_member, $payment_amount, $proof_path, $notes]);
-        $payout_id = $next_payout_id;
-
-        if (!$payout_id) {
-             throw new Exception("Error al registrar el pago.");
-        }
-
-        // 3. Update Orders
+        // 2. Insert Payment Record and Update Orders via SQL Function
         $order_ids = array_column($orders, 'id_order');
-        if (!empty($order_ids)) {
-            // Create placeholders for IN clause
-            $placeholders = implode(',', array_fill(0, count($order_ids), '?'));
-            $sql_update = "UPDATE tbl_pedido SET id_pago_comision = ? WHERE id_pedido IN ($placeholders)";
-            
-            // Params: [new_payout_id, order_id_1, order_id_2, ...]
-            $params = array_merge([$payout_id], $order_ids);
-            
-            $stmt_update = $pdo->prepare($sql_update);
-            $stmt_update->execute($params);
+        $order_ids_json = json_encode($order_ids);
+
+        $stmt_pay = $pdo->prepare("SELECT fun_pagar_comisiones(?, ?, ?, ?, ?)");
+        $stmt_pay->execute([
+            $id_member,
+            $payment_amount,
+            $proof_path,
+            $notes,
+            $order_ids_json
+        ]);
+
+        $resultado_json = $stmt_pay->fetchColumn();
+        $resultado = json_decode($resultado_json, true);
+
+        if (!$resultado || !$resultado['success']) {
+            throw new Exception($resultado['message'] ?? 'Error interno al registrar el pago de comisiones');
         }
 
-        $pdo->commit();
         header("Location: index.php?tab=paid&success=1");
         exit;
 
     } catch (Exception $e) {
-        $pdo->rollBack();
         $error = "Error: " . $e->getMessage();
     }
 }

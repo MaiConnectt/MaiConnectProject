@@ -63,56 +63,24 @@ if (!in_array($estado_nuevo, [0, 1, 2, 3])) {
 }
 
 try {
-    $pdo->beginTransaction();
-
-    // Obtener estado anterior para el historial
-    $stmt_old = $pdo->prepare("SELECT estado, estado_pago FROM tbl_pedido WHERE id_pedido = ?");
-    $stmt_old->execute([$id_pedido]);
-    $old_data = $stmt_old->fetch();
-
-    if (!$old_data) {
-        throw new Exception("Pedido no encontrado");
-    }
-
-    $estado_anterior = (int) $old_data['estado'];
-    $estado_pago_actual = (int) $old_data['estado_pago'];
-
-    // ── BLOQUEO: no cancelar si está En Proceso con pago Aprobado ──────────────
-    if ($estado_nuevo === 3 && $estado_anterior === 1 && $estado_pago_actual === 2) {
-        $pdo->rollBack();
-        http_response_code(403);
-        echo json_encode([
-            'success' => false,
-            'message' => 'No se puede cancelar: el pago ya fue aprobado y el pedido está en producción.'
-        ]);
-        exit;
-    }
-    // ───────────────────────────────────────────────────────────────────────────
-
-    // Actualizar pedido (incluyendo nota_cancelacion si aplica)
-    if ($estado_nuevo === 3) {
-        $stmt = $pdo->prepare("UPDATE tbl_pedido SET estado = ?, nota_cancelacion = ? WHERE id_pedido = ?");
-        $stmt->execute([$estado_nuevo, $nota_cancelacion, $id_pedido]);
-        $motivo_historial = 'Cancelado por administrador: ' . $nota_cancelacion;
-    } else {
-        $stmt = $pdo->prepare("UPDATE tbl_pedido SET estado = ? WHERE id_pedido = ?");
-        $stmt->execute([$estado_nuevo, $id_pedido]);
-        $motivo_historial = 'Cambio de estado desde el panel de administración';
-    }
-
-    // Registrar historial
-    $next_historial_id = $pdo->query("SELECT COALESCE(MAX(id_historial), 0) + 1")->fetchColumn();
-    $log = $pdo->prepare("INSERT INTO tbl_historial_pedido (id_historial, id_pedido, usuario_cambio, estado_anterior, estado_nuevo, motivo) VALUES (?, ?, ?, ?, ?, ?)");
-    $log->execute([
-        $next_historial_id,
+    // Llamada directa a función SQL para gestionar flujos y estados (modo: cambio_directo)
+    $stmt_sql = $pdo->prepare("SELECT fun_gestionar_estado_pedido(?, ?, ?, ?, ?)");
+    $stmt_sql->execute([
         $id_pedido,
-        $_SESSION['user_id'],
-        $estado_anterior,
+        $_SESSION['user_id'] ?? 1,
+        'cambio_directo',
         $estado_nuevo,
-        $motivo_historial
+        $nota_cancelacion
     ]);
 
-    $pdo->commit();
+    $resultado_json = $stmt_sql->fetchColumn();
+    $resultado = json_decode($resultado_json, true);
+
+    if (!$resultado || empty($resultado['success'])) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => $resultado['message'] ?? 'Error al actualizar el estado']);
+        exit;
+    }
 
     $status_names = [
         0 => 'Pendiente',
@@ -126,8 +94,6 @@ try {
         'message' => 'Estado actualizado a: ' . $status_names[$estado_nuevo]
     ]);
 } catch (Exception $e) {
-    if ($pdo->inTransaction())
-        $pdo->rollBack();
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Error al actualizar: ' . $e->getMessage()]);
 }

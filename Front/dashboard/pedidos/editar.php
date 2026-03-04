@@ -16,14 +16,11 @@ $success = '';
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        $pdo->beginTransaction();
-
         // Get form data
         $nombre_cliente = trim($_POST['customer_name'] ?? '');
         $telefono_cliente = trim($_POST['customer_phone'] ?? '');
         $direccion_entrega = trim($_POST['delivery_address'] ?? '');
-        $fecha_entrega = $_POST['delivery_date'] ?? null;
-        $estado_anterior = (int) ($_POST['old_status'] ?? 0);
+        $fecha_entrega = !empty($_POST['delivery_date']) ? $_POST['delivery_date'] : null;
         $estado_nuevo_str = $_POST['status'] ?? 'pending';
         $notas = trim($_POST['notes'] ?? '');
         $productos = $_POST['products'] ?? [];
@@ -37,68 +34,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception('El teléfono del cliente es obligatorio');
         }
 
-        if (empty($productos)) {
+        if (empty($productos) || !is_array($productos)) {
             throw new Exception('Debe agregar al menos un producto');
         }
 
-        // Update order
-        $stmt = $pdo->prepare("
-            UPDATE tbl_pedido 
-            SET estado = ?, notas = ?, fecha_actualizacion = NOW(), 
-                telefono_contacto = ?, direccion_entrega = ?, fecha_entrega = COALESCE(?, fecha_entrega)
-            WHERE id_pedido = ?
-        ");
-        $stmt->execute([$estado_nuevo, $notas, $telefono_cliente, $direccion_entrega, $fecha_entrega, $order_id]);
+        // Parse array to json for PostgreSQL JSON array 
+        $productos_json = json_encode(array_values($productos));
 
-        // Marcar detalles anteriores como inactivos (Eliminación lógica)
-        $stmt = $pdo->prepare("UPDATE tbl_detalle_pedido SET estado = 'inactivo' WHERE id_pedido = ?");
-        $stmt->execute([$order_id]);
-
-        // Create new order items
-        $stmt_detail = $pdo->prepare("
-            INSERT INTO tbl_detalle_pedido (id_detalle_pedido, id_pedido, id_producto, cantidad, precio_unitario)
-            VALUES (?, ?, ?, ?, ?)
-        ");
-
-        foreach ($productos as $product) {
-            // Find or create product
-            $stmt_prod = $pdo->prepare("SELECT id_producto FROM tbl_producto WHERE nombre_producto = ? LIMIT 1");
-            $stmt_prod->execute([$product['name']]);
-            $id_producto = $stmt_prod->fetchColumn();
-
-            if (!$id_producto) {
-                // If product doesn't exist, create it with default stock 0
-                $next_prod_id = $pdo->query("SELECT COALESCE(MAX(id_producto), 0) + 1")->fetchColumn();
-                $stmt_new_prod = $pdo->prepare("INSERT INTO tbl_producto (id_producto, nombre_producto, precio, stock, estado) VALUES (?, ?, ?, 0, 'activo')");
-                $stmt_new_prod->execute([$next_prod_id, $product['name'], $product['price']]);
-                $id_producto = $next_prod_id;
-            }
-
-            if ($id_producto && !empty($product['quantity']) && !empty($product['price'])) {
-                $next_detail_id = $pdo->query("SELECT COALESCE(MAX(id_detalle_pedido), 0) + 1")->fetchColumn();
-                $stmt_detail->execute([
-                    $next_detail_id,
-                    $order_id,
-                    $id_producto,
-                    $product['quantity'],
-                    $product['price']
-                ]);
-            }
-        }
-
-        // Add history entry if status changed or data updated
-        $next_historial_id = $pdo->query("SELECT COALESCE(MAX(id_historial), 0) + 1")->fetchColumn();
-        $log = $pdo->prepare("INSERT INTO tbl_historial_pedido (id_historial, id_pedido, usuario_cambio, estado_anterior, estado_nuevo, motivo) VALUES (?, ?, ?, ?, ?, ?)");
-        $log->execute([
-            $next_historial_id,
+        // Connect to new secure SQL function
+        $stmt_edit = $pdo->prepare("SELECT fun_editar_pedido(?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt_edit->execute([
             $order_id,
-            $_SESSION['user_id'],
-            $estado_anterior,
+            $_SESSION['user_id'], // p_id_usuario_cambio
+            $nombre_cliente,
+            $telefono_cliente,
+            $direccion_entrega,
+            $fecha_entrega,
             $estado_nuevo,
-            'Detalles del pedido editados desde el panel de administración'
+            $notas,
+            $productos_json
         ]);
 
-        $pdo->commit();
+        $resultado_json = $stmt_edit->fetchColumn();
+        $resultado = json_decode($resultado_json, true);
+
+        if (!$resultado || empty($resultado['success'])) {
+            throw new Exception($resultado['message'] ?? 'Error interno al actualizar el pedido');
+        }
 
         header("Location: ver.php?id=$order_id&success=1");
         exit;
