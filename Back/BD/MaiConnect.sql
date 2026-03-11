@@ -249,6 +249,20 @@ INSERT INTO tbl_rol (id_role, nombre_rol, descripcion) VALUES
 INSERT INTO tbl_estado_pedido (id_estado_pedido, nombre_estado) VALUES
 (0, 'Pendiente'), (1, 'En Proceso'), (2, 'Completado'), (3, 'Cancelado');
 
+-- Reglas del Workflow de Estados de Pedido
+CREATE TABLE tbl_estado_transicion (
+    id_transicion     SERIAL             PRIMARY KEY,
+    estado_actual     INTEGER            NOT NULL REFERENCES tbl_estado_pedido(id_estado_pedido) ON DELETE CASCADE,
+    estado_siguiente  INTEGER            NOT NULL REFERENCES tbl_estado_pedido(id_estado_pedido) ON DELETE CASCADE,
+    UNIQUE (estado_actual, estado_siguiente)
+);
+
+INSERT INTO tbl_estado_transicion (estado_actual, estado_siguiente) VALUES 
+(0, 1), -- Pendiente -> En proceso
+(0, 3), -- Pendiente -> Cancelado
+(1, 2), -- En proceso -> Completado
+(1, 3); -- En proceso -> Cancelado
+
 INSERT INTO tbl_estado_pago (id_estado_pago, nombre_estado) VALUES
 (0, 'Sin Comprobante'), (1, 'Subido'), (2, 'Aprobado'), (3, 'Rechazado');
 

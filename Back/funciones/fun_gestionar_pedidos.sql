@@ -87,6 +87,21 @@ BEGIN
         RETURN json_build_object('success', false, 'message', 'Acción desconocida', 'error_code', 'UNKNOWN_ACTION');
     END IF;
 
+    -- VALIDAR TRANSICIÓN DE ESTADO (Nueva Lógica Workflow)
+    IF v_pedido.estado != v_estado_final THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM tbl_estado_transicion
+            WHERE estado_actual = v_pedido.estado
+            AND estado_siguiente = v_estado_final
+        ) THEN
+            RETURN json_build_object(
+                'success', false, 
+                'message', 'Cambio de estado no permitido. Secuencia inválida.', 
+                'error_code', 'INVALID_TRANSITION'
+            );
+        END IF;
+    END IF;
+
     -- Actualizar Tabla Pedido Oficialmente
     IF p_accion = 'cancelar_pedido' OR (p_accion = 'cambio_directo' AND p_estado_nuevo = 3) THEN
         UPDATE tbl_pedido SET estado = v_estado_final, estado_pago = v_pago_final, nota_cancelacion = p_notas WHERE id_pedido = p_id_pedido;

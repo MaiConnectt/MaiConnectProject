@@ -19,7 +19,7 @@ try {
             $apellido = limpiar_cadena($_POST['apellido'] ?? '');
             $email = limpiar_cadena($_POST['email'] ?? '');
             $password = limpiar_cadena($_POST['password'] ?? '');
-            $comision = floatval($_POST['comision'] ?? 5.0);
+
             $estado = $_POST['status'] ?? ($_POST['estado'] ?? 'activo');
             $telefono = limpiar_cadena($_POST['telefono'] ?? '');
             $universidad = limpiar_cadena($_POST['universidad'] ?? '');
@@ -33,7 +33,7 @@ try {
             }
 
             // Call PostgreSQL function to create user + member in one transaction
-            $stmt = $pdo->prepare("SELECT fun_crear_vendedor(?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt = $pdo->prepare("SELECT fun_crear_vendedor(?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $nombre,
                 $apellido,
@@ -41,7 +41,6 @@ try {
                 password_hash($password, PASSWORD_BCRYPT),
                 $telefono,
                 $universidad,
-                $comision,
                 $estado
             ]);
 
@@ -62,9 +61,10 @@ try {
             $nombre = limpiar_cadena($_POST['nombre'] ?? '');
             $apellido = limpiar_cadena($_POST['apellido'] ?? '');
             $email = limpiar_cadena($_POST['email'] ?? '');
-            $comision = floatval($_POST['comision'] ?? 0);
+
             $estado = $_POST['estado'] ?? 'activo';
             $telefono = limpiar_cadena($_POST['telefono'] ?? '');
+            $universidad = limpiar_cadena($_POST['universidad'] ?? '');
 
             if (!$id_miembro || empty($nombre) || empty($email) || empty($telefono)) {
                 throw new Exception("Datos incompletos (Nombre, Email y Teléfono son obligatorios)");
@@ -82,7 +82,7 @@ try {
                 $apellido,
                 $email,
                 $telefono,
-                $comision,
+                $universidad,
                 $estado
             ]);
 
@@ -102,7 +102,7 @@ try {
             if (!$id_miembro)
                 throw new Exception("ID inválido");
 
-            // Ejecuta función en base de datos para validar y borrar lógicamente
+            // Ejecuta función en base de datos para borrar lógicamente
             $stmt = $pdo->prepare("SELECT fun_desactivar_vendedor(?)");
             $stmt->execute([$id_miembro]);
 
@@ -111,6 +111,26 @@ try {
 
             if (!$resultado || !$resultado['success']) {
                 $msg = $resultado['message'] ?? 'Error desconocido al eliminar el vendedor';
+                throw new Exception($msg);
+            }
+
+            echo json_encode(['success' => true, 'message' => $resultado['message']]);
+            break;
+
+        case 'restore':
+            $id_miembro = intval($_POST['id_miembro'] ?? 0);
+            if (!$id_miembro)
+                throw new Exception("ID inválido");
+
+            // Ejecuta función en base de datos para restaurar lógicamente
+            $stmt = $pdo->prepare("SELECT fun_restaurar_vendedor(?)");
+            $stmt->execute([$id_miembro]);
+
+            $resultado_json = $stmt->fetchColumn();
+            $resultado = json_decode($resultado_json, true);
+
+            if (!$resultado || !$resultado['success']) {
+                $msg = $resultado['message'] ?? 'Error desconocido al restaurar el vendedor';
                 throw new Exception($msg);
             }
 

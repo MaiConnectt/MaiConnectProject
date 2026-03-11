@@ -1,9 +1,9 @@
 <?php
-$host = '10.5.213.111';
+$host = 'localhost';
 $port = 5432;
-$dbname = 'db_evolution1';
-$user = 'mdavid';
-$password = '3205560180m';
+$dbname = 'MaiConnect';
+$user = 'postgres';
+$password = '3205560180';
 try {
     $pdo = new PDO(
         "pgsql:host=$host;port=$port;dbname=$dbname",

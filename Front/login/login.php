@@ -88,6 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         if (!$member) {
                             $message = '❌ Este usuario vendedor no está registrado en tbl_miembro. Contacta al administrador.';
+                        } elseif ($member['estado'] === 'eliminado') {
+                            $message = '❌ Esta cuenta de vendedor ha sido inhabilitada por completo. Contacta al administrador.';
                         } elseif ($member['estado'] !== 'activo') {
                             $message = '❌ Tu cuenta está inactiva, contacta al administrador.';
                         } else {

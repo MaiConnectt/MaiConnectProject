@@ -17,7 +17,7 @@ $where_conditions = [];
 $params = [];
 
 if (empty($estado_filter)) {
-    $where_conditions[] = "m.estado = 'activo'";
+    $where_conditions[] = "m.estado != 'eliminado'";
 }
 
 if (!empty($estado_filter)) {
@@ -92,10 +92,10 @@ try {
         SELECT 
             COUNT(id_miembro) as total_sellers,
             COUNT(CASE WHEN estado = 'activo' THEN 1 END) as active_sellers,
-            COALESCE((SELECT SUM(ot.total) FROM tbl_pedido o JOIN vw_totales_pedido ot ON o.id_pedido = ot.id_pedido WHERE o.estado = 2), 0) as total_sales_all,
-            COALESCE((SELECT SUM(monto_comision) FROM tbl_pedido WHERE estado = 2), 0) as total_commissions_all,
-            COALESCE((SELECT SUM(monto_comision) FROM tbl_pedido WHERE estado = 2 AND id_pago_comision IS NULL), 0) as total_pending_all
-        FROM tbl_miembro
+            COALESCE((SELECT SUM(ot.total) FROM tbl_pedido o JOIN vw_totales_pedido ot ON o.id_pedido = ot.id_pedido WHERE o.estado = 2 AND o.id_vendedor IN (SELECT id_miembro FROM tbl_miembro WHERE estado != 'eliminado')), 0) as total_sales_all,
+            COALESCE((SELECT SUM(monto_comision) FROM tbl_pedido WHERE estado = 2 AND id_vendedor IN (SELECT id_miembro FROM tbl_miembro WHERE estado != 'eliminado')), 0) as total_commissions_all,
+            COALESCE((SELECT SUM(monto_comision) FROM tbl_pedido WHERE estado = 2 AND id_pago_comision IS NULL AND id_vendedor IN (SELECT id_miembro FROM tbl_miembro WHERE estado != 'eliminado')), 0) as total_pending_all
+        FROM tbl_miembro WHERE estado != 'eliminado'
     ";
     $stats = $pdo->query($stats_query)->fetch();
 } catch (PDOException $e) {
@@ -219,6 +219,8 @@ try {
                     <option value="activo" <?php echo $estado_filter === 'activo' ? 'selected' : ''; ?>>Activos</option>
                     <option value="inactivo" <?php echo $estado_filter === 'inactivo' ? 'selected' : ''; ?>>Inactivos
                     </option>
+                    <option value="eliminado" <?php echo $estado_filter === 'eliminado' ? 'selected' : ''; ?>>Eliminados
+                    </option>
                 </select>
 
                 <?php if (!empty($search) || !empty($estado_filter)): ?>
@@ -252,7 +254,7 @@ try {
                                     <?php echo strtoupper(substr($seller['nombre'], 0, 1) . substr($seller['apellido'], 0, 1)); ?>
                                 </div>
                                 <div class="seller-status-badge <?php echo $seller['estado']; ?>">
-                                    <?php echo $seller['estado'] === 'activo' ? 'Activo' : 'Inactivo'; ?>
+                                    <?php echo ucfirst($seller['estado']); ?>
                                 </div>
                             </div>
 
@@ -297,20 +299,29 @@ try {
                             </div>
 
                             <div class="seller-actions">
-                                <a href="ver.php?id=<?php echo $seller['id_miembro']; ?>" class="btn-action view"
-                                    title="Ver detalles">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="editar.php?id=<?php echo $seller['id_miembro']; ?>" class="btn-action edit"
-                                    title="Editar">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <button class="btn-action delete btn-delete"
-                                    data-seller-id="<?php echo $seller['id_miembro']; ?>"
-                                    data-seller-name="<?php echo htmlspecialchars($seller['nombre'] . ' ' . $seller['apellido']); ?>"
-                                    title="Eliminar">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <?php if ($seller['estado'] === 'eliminado'): ?>
+                                    <button class="btn-action restore btn-restore"
+                                        data-seller-id="<?php echo $seller['id_miembro']; ?>"
+                                        data-seller-name="<?php echo htmlspecialchars($seller['nombre'] . ' ' . $seller['apellido']); ?>"
+                                        title="Restaurar vendedor" style="background-color: #e6f7eb; color: #28a745;">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                <?php else: ?>
+                                    <a href="ver.php?id=<?php echo $seller['id_miembro']; ?>" class="btn-action view"
+                                        title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="editar.php?id=<?php echo $seller['id_miembro']; ?>" class="btn-action edit"
+                                        title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button class="btn-action delete btn-delete"
+                                        data-seller-id="<?php echo $seller['id_miembro']; ?>"
+                                        data-seller-name="<?php echo htmlspecialchars($seller['nombre'] . ' ' . $seller['apellido']); ?>"
+                                        title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>

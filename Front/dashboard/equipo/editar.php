@@ -148,9 +148,10 @@ if (!$seller) {
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Porcentaje de Comisión (%)</label>
-                        <input type="number" name="comision" class="form-control" step="0.1"
-                            value="<?php echo floatval($seller['porcentaje_comision']); ?>" min="0" max="100">
+                        <label class="form-label">Universidad</label>
+                        <input type="text" name="universidad" class="form-control"
+                            value="<?php echo htmlspecialchars($seller['universidad'] ?? ''); ?>"
+                            placeholder="Ej. Universidad Central">
                     </div>
 
                     <div class="form-group">

@@ -134,11 +134,7 @@ require_once __DIR__ . '/../../conexion.php';
                             placeholder="Ej. Universidad Central">
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Porcentaje de Comisión (%)</label>
-                        <input type="number" name="comision" class="form-control" step="0.1" value="5.0" min="0"
-                            max="100">
-                    </div>
+
 
                     <div class="form-group">
                         <label class="form-label">Estado Inicial</label>

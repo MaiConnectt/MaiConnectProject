@@ -9,10 +9,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
             MaiModal.confirm({
                 title: 'Eliminar Vendedor',
-                message: `¿Estás seguro de que deseas eliminar a ${sellerName}? Esta acción no se puede deshacer.`,
+                message: `¿Estás seguro de que deseas eliminar a ${sellerName}? Esta acción no se puede deshacer de forma simple.`,
                 confirmText: 'Eliminar',
                 onConfirm: () => {
                     deleteSeller(sellerId);
+                }
+            });
+        });
+    });
+
+    // Restore buttons
+    const restoreButtons = document.querySelectorAll('.btn-restore');
+    restoreButtons.forEach(button => {
+        button.addEventListener('click', function () {
+            const sellerId = this.dataset.sellerId;
+            const sellerName = this.dataset.sellerName;
+
+            MaiModal.confirm({
+                title: 'Restaurar Vendedor',
+                message: `¿Deseas restaurar a ${sellerName} y regresarlo al estado inactivo?`,
+                confirmText: 'Restaurar',
+                onConfirm: () => {
+                    restoreSeller(sellerId);
                 }
             });
         });
@@ -52,6 +70,43 @@ document.addEventListener('DOMContentLoaded', function () {
                     type: 'danger'
                 });
                 MaiModal.hideLoading('Eliminar');
+            });
+    }
+
+    function restoreSeller(sellerId) {
+        // Show loading state
+        MaiModal.showLoading('Restaurando...');
+
+        // Send restore request
+        fetch('acciones.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `action=restore&id_miembro=${sellerId}`
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload page to show updated list
+                    window.location.reload();
+                } else {
+                    MaiModal.alert({
+                        title: 'Error',
+                        message: 'Error al restaurar vendedor: ' + (data.message || 'Error desconocido'),
+                        type: 'danger'
+                    });
+                    MaiModal.hideLoading('Restaurar');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                MaiModal.alert({
+                    title: 'Error',
+                    message: 'Error al restaurar vendedor. Por favor, intenta de nuevo.',
+                    type: 'danger'
+                });
+                MaiModal.hideLoading('Restaurar');
             });
     }
 
