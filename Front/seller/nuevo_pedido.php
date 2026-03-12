@@ -4,9 +4,9 @@ require_once __DIR__ . '/seller_auth.php';
 // Configurar zona horaria
 date_default_timezone_set('America/Bogota');
 
-// Obtener productos activos con stock
+// Obtener productos activos
 try {
-    $products_query = "SELECT id_producto, nombre_producto, precio, stock FROM tbl_producto WHERE stock > 0 AND estado = 'activo' ORDER BY nombre_producto";
+    $products_query = "SELECT id_producto, nombre_producto, descripcion, precio FROM tbl_producto WHERE estado = 'activo' ORDER BY nombre_producto";
     $products_stmt = $pdo->query($products_query);
     $products = $products_stmt->fetchAll();
 } catch (PDOException $e) {
@@ -87,16 +87,38 @@ unset($_SESSION['success'], $_SESSION['error']);
         .product-item {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            justify-content: space-between;
             padding: 1rem;
             background: white;
             border-radius: 12px;
             margin-bottom: 0.75rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .product-item-info {
+            flex: 1;
+            padding-right: 1rem;
         }
 
         .product-item-name {
-            flex: 1;
-            font-weight: 500;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .product-item-desc {
+            font-size: 0.85rem;
+            color: var(--gray-500);
+            line-height: 1.4;
+        }
+
+        .product-item-controls {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
         }
 
         .product-item-price {
@@ -104,9 +126,55 @@ unset($_SESSION['success'], $_SESSION['error']);
             font-weight: 600;
         }
 
-        .quantity-input {
-            width: 80px;
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .btn-qty {
+            background: var(--gray-100);
+            border: none;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: var(--gray-700);
+            transition: all 0.2s;
+        }
+
+        .btn-qty:hover {
+            background: var(--gray-200);
+            color: var(--primary);
+        }
+
+        .quantity-control .quantity-input {
+            width: 50px;
+            border: none;
+            border-radius: 0;
+            padding: 0;
             text-align: center;
+            font-weight: 600;
+        }
+
+        /* Ocultar flechas incrementables del input de tipo number */
+        .quantity-control .quantity-input::-webkit-outer-spin-button,
+        .quantity-control .quantity-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .quantity-control .quantity-input {
+            -moz-appearance: textfield;
+        }
+
+        .quantity-control .quantity-input:focus {
+            box-shadow: none;
         }
 
         .commission-preview {
@@ -211,23 +279,34 @@ unset($_SESSION['success'], $_SESSION['error']);
                         <div class="product-selector" id="productSelector">
                             <?php foreach ($products as $product): ?>
                                 <div class="product-item">
-                                    <div class="product-item-name">
-                                        <i class="fas fa-cookie-bite" style="color: var(--primary);"></i>
-                                        <?php echo htmlspecialchars($product['nombre_producto']); ?>
-                                        <span style="font-size: 0.75rem; color: var(--gray-500);">
-                                            (Stock:
-                                            <?php echo $product['stock']; ?>)
-                                        </span>
+                                    <div class="product-item-info">
+                                        <div class="product-item-name">
+                                            <i class="fas fa-cookie-bite" style="color: var(--primary);"></i>
+                                            <?php echo htmlspecialchars($product['nombre_producto']); ?>
+                                        </div>
+                                        <?php if (!empty($product['descripcion'])): ?>
+                                            <div class="product-item-desc">
+                                                <?php echo htmlspecialchars($product['descripcion']); ?>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
-                                    <div class="product-item-price">
-                                        $
-                                        <?php echo number_format($product['precio'], 0, ',', '.'); ?>
+                                    <div class="product-item-controls">
+                                        <div class="product-item-price">
+                                            $<?php echo number_format($product['precio'], 0, ',', '.'); ?>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <label
+                                                style="font-size: 0.85rem; color: var(--gray-500); font-weight: 500;">Cantidad:</label>
+                                            <div class="quantity-control">
+                                                <button type="button" class="btn-qty" onclick="updateQty(this, -1)"><i class="fas fa-minus" style="font-size: 0.8rem;"></i></button>
+                                                <input type="number" name="products[<?php echo $product['id_producto']; ?>]"
+                                                    class="form-input quantity-input product-quantity" min="0" step="1"
+                                                    value="0" onkeypress="return event.charCode >= 48 && event.charCode <= 57"
+                                                    data-price="<?php echo $product['precio']; ?>">
+                                                <button type="button" class="btn-qty" onclick="updateQty(this, 1)"><i class="fas fa-plus" style="font-size: 0.8rem;"></i></button>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <input type="number" name="products[<?php echo $product['id_producto']; ?>]"
-                                        class="form-input quantity-input product-quantity" min="0" step="1"
-                                        max="<?php echo $product['stock']; ?>" value="0"
-                                        onkeypress="return event.charCode >= 48 && event.charCode <= 57"
-                                        data-price="<?php echo $product['precio']; ?>">
                                 </div>
                             <?php endforeach; ?>
                         </div>
@@ -252,14 +331,6 @@ unset($_SESSION['success'], $_SESSION['error']);
                         </div>
                     </div>
 
-                    <!-- Notes -->
-                    <div class="content-card">
-                        <div class="form-group">
-                            <label class="form-label">Notas Adicionales</label>
-                            <textarea name="notes" class="form-textarea"
-                                placeholder="Instrucciones especiales, detalles del pedido, etc."></textarea>
-                        </div>
-                    </div>
 
                     <!-- Submit Button -->
                     <div style="display: flex; gap: 1rem;">
@@ -325,6 +396,16 @@ unset($_SESSION['success'], $_SESSION['error']);
                 }
             });
         });
+
+        // Funcionalidad para botones +/-
+        function updateQty(btn, change) {
+            const input = btn.parentElement.querySelector('.product-quantity');
+            let val = parseInt(input.value) || 0;
+            val += change;
+            if (val < 0) val = 0;
+            input.value = val;
+            calculateTotals();
+        }
 
         // Form validation
         document.getElementById('orderForm').addEventListener('submit', function (e) {

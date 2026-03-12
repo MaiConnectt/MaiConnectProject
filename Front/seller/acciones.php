@@ -41,15 +41,13 @@ try {
             foreach ($products_data as $product_id => $quantity) {
                 $quantity = (int) $quantity;
                 if ($quantity > 0) {
-                    $prod_stmt = $pdo->prepare("SELECT precio, stock, nombre_producto FROM tbl_producto WHERE id_producto = ? FOR UPDATE");
+                    $prod_stmt = $pdo->prepare("SELECT precio, nombre_producto FROM tbl_producto WHERE id_producto = ? FOR UPDATE");
                     $prod_stmt->execute([$product_id]);
                     $product = $prod_stmt->fetch();
 
-                    if (!$product || $product['stock'] < $quantity) {
-                        throw new Exception("Stock insuficiente para: " . ($product['nombre_producto'] ?? 'Producto #' . $product_id));
+                    if (!$product) {
+                        throw new Exception("Producto no encontrado o inactivo: #" . $product_id);
                     }
-
-                    $pdo->prepare("UPDATE tbl_producto SET stock = stock - ? WHERE id_producto = ?")->execute([$quantity, $product_id]);
 
                     $next_detail_id = $pdo->query("SELECT COALESCE(MAX(id_detalle_pedido), 0) + 1 as next_id FROM tbl_detalle_pedido")->fetch()['next_id'];
                     $pdo->prepare("INSERT INTO tbl_detalle_pedido (id_detalle_pedido, id_pedido, id_producto, cantidad, precio_unitario) VALUES (?, ?, ?, ?, ?)")

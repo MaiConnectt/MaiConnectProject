@@ -55,6 +55,17 @@ require_once __DIR__ . '/../../conexion.php';
             border-color: var(--primary);
         }
 
+        /* Quitar flechas de inputs tipo number */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
         .btn-submit {
             background: var(--gradient-primary);
             color: white;
@@ -113,16 +124,10 @@ require_once __DIR__ . '/../../conexion.php';
                             placeholder="Breve descripción del producto..."></textarea>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div class="form-group">
-                            <label class="form-label">Precio ($)</label>
-                            <input type="number" name="precio" class="form-control" required min="0" step="100"
-                                placeholder="0">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Stock Inicial</label>
-                            <input type="number" name="stock" class="form-control" required min="0" value="0">
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">Precio ($)</label>
+                        <input type="number" name="precio" class="form-control" required min="0" step="100"
+                            placeholder="0">
                     </div>
 
                     <div class="form-group">

@@ -134,6 +134,25 @@ if (!$seller) {
                         </div>
                     </div>
 
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label">Tipo Documento</label>
+                            <select name="tipo_documento" class="form-control" required>
+                                <option value="">Seleccionar</option>
+                                <option value="CC" <?php echo ($seller['tipo_documento'] ?? '') === 'CC' ? 'selected' : ''; ?>>Cédula de Ciudadanía</option>
+                                <option value="TI" <?php echo ($seller['tipo_documento'] ?? '') === 'TI' ? 'selected' : ''; ?>>Tarjeta de Identidad</option>
+                                <option value="CE" <?php echo ($seller['tipo_documento'] ?? '') === 'CE' ? 'selected' : ''; ?>>Cédula de Extranjería</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Número de Documento</label>
+                            <input type="text" name="numero_documento" class="form-control" required maxlength="15"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                                value="<?php echo htmlspecialchars($seller['numero_documento'] ?? ''); ?>"
+                                placeholder="Número de identificación">
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label class="form-label">Correo Electrónico</label>
                         <input type="email" name="email" class="form-control" required

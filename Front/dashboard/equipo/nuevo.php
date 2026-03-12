@@ -112,6 +112,24 @@ require_once __DIR__ . '/../../conexion.php';
                         </div>
                     </div>
 
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label">Tipo Documento</label>
+                            <select name="tipo_documento" class="form-control" required>
+                                <option value="">Seleccionar</option>
+                                <option value="CC">Cédula de Ciudadanía</option>
+                                <option value="TI">Tarjeta de Identidad</option>
+                                <option value="CE">Cédula de Extranjería</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Número de Documento</label>
+                            <input type="text" name="numero_documento" class="form-control" required maxlength="15"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '');"
+                                placeholder="Número de identificación">
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label class="form-label">Correo Electrónico</label>
                         <input type="email" name="email" class="form-control" required placeholder="email@ejemplo.com">

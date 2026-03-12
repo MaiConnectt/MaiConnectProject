@@ -156,7 +156,43 @@ require_once __DIR__ . '/auth.php';
             </div>
 
             <!-- Content Grid -->
-            <div class="content-grid" style="grid-template-columns: 1fr;">
+            <div class="content-grid" style="grid-template-columns: 1fr 1fr; gap: 2rem;">
+
+                <!-- University Chart -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h2 class="card-title">Vendedores por Universidad</h2>
+                    </div>
+                    <div style="padding: 1rem;">
+                        <canvas id="uniChart"
+                            style="width: 100%; max-height: 280px; display: block; margin: 0 auto;"></canvas>
+                    </div>
+                    <?php
+                    try {
+                        $stmt_uni = $pdo->query("
+                            SELECT 
+                                COALESCE(NULLIF(TRIM(universidad), ''), 'Sin especificar') AS nombre_universidad,
+                                COUNT(id_miembro) AS total_vendedores
+                            FROM tbl_miembro
+                            WHERE estado != 'eliminado'
+                            GROUP BY COALESCE(NULLIF(TRIM(universidad), ''), 'Sin especificar')
+                            ORDER BY total_vendedores DESC
+                        ");
+                        $uni_data = $stmt_uni->fetchAll(PDO::FETCH_ASSOC);
+
+                        $labels = [];
+                        $data = [];
+                        foreach ($uni_data as $row) {
+                            $labels[] = $row['nombre_universidad'];
+                            $data[] = (int) $row['total_vendedores'];
+                        }
+                    } catch (PDOException $e) {
+                        $labels = [];
+                        $data = [];
+                    }
+                    ?>
+                </div>
+
                 <!-- Recent Orders -->
                 <div class="content-card">
                     <div class="card-header">
@@ -243,6 +279,44 @@ require_once __DIR__ . '/auth.php';
     </div>
 
     <script src="dashboard.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const ctx = document.getElementById('uniChart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: <?php echo json_encode($labels ?? []); ?>,
+                        datasets: [{
+                            label: 'Vendedores',
+                            data: <?php echo json_encode($data ?? []); ?>,
+                            backgroundColor: 'rgba(255, 107, 107, 0.7)',
+                            borderColor: 'rgba(255, 107, 107, 1)',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 
 </html>

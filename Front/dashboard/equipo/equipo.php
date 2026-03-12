@@ -60,6 +60,8 @@ $query = "
         u.nombre,
         u.apellido,
         u.email,
+        m.tipo_documento,
+        m.numero_documento,
         m.universidad,
         m.telefono,
         m.porcentaje_comision,
@@ -262,6 +264,13 @@ try {
                                 <h3 class="seller-name">
                                     <?php echo htmlspecialchars($seller['nombre'] . ' ' . $seller['apellido']); ?>
                                 </h3>
+
+                                <?php if (!empty($seller['tipo_documento']) && !empty($seller['numero_documento'])): ?>
+                                    <p class="seller-university" style="color: var(--primary);">
+                                        <strong><?php echo htmlspecialchars($seller['tipo_documento']); ?>:</strong>
+                                        <?php echo htmlspecialchars($seller['numero_documento']); ?>
+                                    </p>
+                                <?php endif; ?>
 
                                 <?php if (!empty($seller['universidad'])): ?>
                                     <p class="seller-university">

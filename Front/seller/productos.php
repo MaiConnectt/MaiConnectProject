@@ -37,8 +37,7 @@ try {
             id_product,
             product_name,
             price,
-            description,
-            stock
+            description
         FROM tbl_product
         $where_clause
         ORDER BY product_name ASC
@@ -275,13 +274,6 @@ try {
                                 <div class="product-footer">
                                     <div>
                                         <div class="product-price">$<?php echo number_format($product['price'], 0, ',', '.'); ?>
-                                        </div>
-                                        <div class="product-stock <?php echo $product['stock'] < 10 ? 'low' : ''; ?>">
-                                            <?php if ($product['stock'] > 0): ?>
-                                                <i class="fas fa-box"></i> Stock: <?php echo $product['stock']; ?>
-                                            <?php else: ?>
-                                                <i class="fas fa-exclamation-circle"></i> Sin stock
-                                            <?php endif; ?>
                                         </div>
                                     </div>
                                     <a href="nuevo_pedido.php?product=<?php echo $product['id_product']; ?>"

@@ -128,17 +128,10 @@ if (!$product) {
                             rows="3"><?php echo htmlspecialchars($product['descripcion']); ?></textarea>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div class="form-group">
-                            <label class="form-label">Precio ($)</label>
-                            <input type="number" name="precio" class="form-control" required min="0" step="100"
-                                value="<?php echo floatval($product['precio']); ?>">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Stock Actual</label>
-                            <input type="number" name="stock" class="form-control" required min="0"
-                                value="<?php echo intval($product['stock']); ?>">
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">Precio ($)</label>
+                        <input type="number" name="precio" class="form-control" required min="0" step="100"
+                            value="<?php echo floatval($product['precio']); ?>">
                     </div>
 
                     <div class="form-group">

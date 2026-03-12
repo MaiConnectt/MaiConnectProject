@@ -17,6 +17,8 @@ try {
         case 'create':
             $nombre = limpiar_cadena($_POST['nombre'] ?? '');
             $apellido = limpiar_cadena($_POST['apellido'] ?? '');
+            $tipo_documento = limpiar_cadena($_POST['tipo_documento'] ?? '');
+            $numero_documento = limpiar_cadena($_POST['numero_documento'] ?? '');
             $email = limpiar_cadena($_POST['email'] ?? '');
             $password = limpiar_cadena($_POST['password'] ?? '');
 
@@ -24,8 +26,8 @@ try {
             $telefono = limpiar_cadena($_POST['telefono'] ?? '');
             $universidad = limpiar_cadena($_POST['universidad'] ?? '');
 
-            if (empty($nombre) || empty($email) || empty($password) || empty($telefono)) {
-                throw new Exception("Nombre, Email, Teléfono y Contraseña son obligatorios");
+            if (empty($nombre) || empty($email) || empty($password) || empty($telefono) || empty($tipo_documento) || empty($numero_documento)) {
+                throw new Exception("Nombre, Documento, Email, Teléfono y Contraseña son obligatorios");
             }
 
             if (!validar_telefono($telefono)) {
@@ -33,10 +35,12 @@ try {
             }
 
             // Call PostgreSQL function to create user + member in one transaction
-            $stmt = $pdo->prepare("SELECT fun_crear_vendedor(?, ?, ?, ?, ?, ?, ?)");
+            $stmt = $pdo->prepare("SELECT fun_crear_vendedor(?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $nombre,
                 $apellido,
+                $tipo_documento,
+                $numero_documento,
                 $email,
                 password_hash($password, PASSWORD_BCRYPT),
                 $telefono,
@@ -50,6 +54,9 @@ try {
 
             if (!$resultado || !$resultado['success']) {
                 $msg = $resultado['message'] ?? 'Error desconocido en la base de datos';
+                if (strpos($msg, 'unique_documento') !== false || strpos($msg, '23505') !== false) {
+                    $msg = 'Ya existe un vendedor registrado con este número de documento.';
+                }
                 throw new Exception($msg);
             }
 
@@ -60,14 +67,16 @@ try {
             $id_miembro = intval($_POST['id_miembro'] ?? 0);
             $nombre = limpiar_cadena($_POST['nombre'] ?? '');
             $apellido = limpiar_cadena($_POST['apellido'] ?? '');
+            $tipo_documento = limpiar_cadena($_POST['tipo_documento'] ?? '');
+            $numero_documento = limpiar_cadena($_POST['numero_documento'] ?? '');
             $email = limpiar_cadena($_POST['email'] ?? '');
 
             $estado = $_POST['estado'] ?? 'activo';
             $telefono = limpiar_cadena($_POST['telefono'] ?? '');
             $universidad = limpiar_cadena($_POST['universidad'] ?? '');
 
-            if (!$id_miembro || empty($nombre) || empty($email) || empty($telefono)) {
-                throw new Exception("Datos incompletos (Nombre, Email y Teléfono son obligatorios)");
+            if (!$id_miembro || empty($nombre) || empty($email) || empty($telefono) || empty($tipo_documento) || empty($numero_documento)) {
+                throw new Exception("Datos incompletos (Nombre, Documento, Email y Teléfono son obligatorios)");
             }
 
             if (!validar_telefono($telefono)) {
@@ -75,11 +84,13 @@ try {
             }
 
             // Call PostgreSQL function to edit user + member in one transaction
-            $stmt = $pdo->prepare("SELECT fun_editar_vendedor(?, ?, ?, ?, ?, ?, ?)");
+            $stmt = $pdo->prepare("SELECT fun_editar_vendedor(?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $id_miembro,
                 $nombre,
                 $apellido,
+                $tipo_documento,
+                $numero_documento,
                 $email,
                 $telefono,
                 $universidad,
@@ -91,6 +102,9 @@ try {
 
             if (!$resultado || !$resultado['success']) {
                 $msg = $resultado['message'] ?? 'Error desconocido al actualizar en base de datos';
+                if (strpos($msg, 'unique_documento') !== false || strpos($msg, '23505') !== false) {
+                    $msg = 'Ya existe un vendedor registrado con este número de documento.';
+                }
                 throw new Exception($msg);
             }
 

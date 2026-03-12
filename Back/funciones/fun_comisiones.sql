@@ -52,7 +52,8 @@ BEGIN
             SET id_pago_comision = v_id_pago_comision 
             WHERE id_pedido = v_id_pedido 
             AND id_vendedor = p_id_miembro 
-            AND estado = 2; -- Solo asegurar que estén completados (doble validación de seguridad)
+            AND estado = 2
+            AND (id_pago_comision IS NULL OR id_pago_comision = 0); -- Seguridad anti-duplicados
         END IF;
     END LOOP;
 

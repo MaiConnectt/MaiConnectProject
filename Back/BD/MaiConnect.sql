@@ -1,4 +1,7 @@
--- 1. DROP EN ORDEN SEGURO (MANTENIENDO INTEGRIDAD)
+-- 1. DROP EN ORDEN SEGURO (vistas primero, luego tablas hoja a raíz)
+
+-- Vistas (deben eliminarse antes que sus tablas base)
+DROP VIEW IF EXISTS vw_vendedores_por_universidad;
 DROP VIEW IF EXISTS vw_comisiones_vendedor;
 DROP VIEW IF EXISTS vw_totales_pedido;
 
@@ -9,6 +12,7 @@ DROP TABLE IF EXISTS tbl_auditoria;
 DROP TABLE IF EXISTS tbl_configuracion_general;
 DROP TABLE IF EXISTS tbl_movimiento_stock;
 DROP TABLE IF EXISTS tbl_rol_permiso;
+DROP TABLE IF EXISTS tbl_estado_transicion;
 DROP TABLE IF EXISTS tbl_historial_pedido;
 DROP TABLE IF EXISTS tbl_comprobante_pago;
 DROP TABLE IF EXISTS tbl_detalle_pedido;
@@ -17,6 +21,7 @@ DROP TABLE IF EXISTS tbl_detalle_pedido;
 DROP TABLE IF EXISTS tbl_pedido;
 DROP TABLE IF EXISTS tbl_pago_comision;
 DROP TABLE IF EXISTS tbl_miembro;
+DROP TABLE IF EXISTS tbl_universidad;
 DROP TABLE IF EXISTS tbl_usuario;
 
 -- Tablas maestras (raíces)
@@ -78,6 +83,12 @@ CREATE TABLE tbl_metodo_pago (
 
 -- 3. TABLAS PRINCIPALES (ENTIDADES)
 
+-- Catálogo de Universidades para normalización de vendedores
+CREATE TABLE tbl_universidad (
+    id_universidad SERIAL PRIMARY KEY,
+    nombre_universidad VARCHAR(150) UNIQUE NOT NULL
+);
+
 -- Usuarios del sistema (Credenciales y datos básicos)
 CREATE TABLE tbl_usuario (
     id_usuario      INTEGER            PRIMARY KEY,          -- Identificador único (Manual)
@@ -99,16 +110,18 @@ CREATE TABLE tbl_miembro (
     telefono        VARCHAR,                                  -- Contacto directoizado (10 digitos)
     estado          VARCHAR           DEFAULT 'activo',       -- Estado lógico (activo/inactivo)
     id_estado_miembro DECIMAL(1,0)    REFERENCES tbl_estado_miembro(id_estado_miembro),
+    id_universidad  INTEGER           REFERENCES tbl_universidad(id_universidad),
+    tipo_documento  VARCHAR(5),                               -- CC, CE, TI, etc.
+    numero_documento VARCHAR(20)      UNIQUE,                 -- Número de identificación
     fecha_contratacion DATE           DEFAULT CURRENT_DATE    -- Fecha de vinculación
 );
 
 -- Catálogo de productos disponibles para la venta
 CREATE TABLE tbl_producto (
     id_producto     INTEGER            PRIMARY KEY,          -- Identificador único (Manual)
-    nombre_producto VARCHAR            NOT NULL,             -- Nombre del producto (ej. Torta)
+    nombre_producto VARCHAR            NOT NULL UNIQUE,      -- Nombre del producto (ej. Torta)
     descripcion     TEXT,                                    -- Descripción o ingredientes
     precio          DECIMAL(10, 2)     NOT NULL,             -- Precio de venta al público
-    stock           INTEGER            NOT NULL DEFAULT 0,   -- Cantidad disponible actual
     imagen_principal VARCHAR(255),                           -- Ruta del archivo de imagen
     estado          VARCHAR            DEFAULT 'activo',     -- Para soft delete de productos
     fecha_creacion  TIMESTAMP          DEFAULT CURRENT_TIMESTAMP,
@@ -269,22 +282,28 @@ INSERT INTO tbl_estado_pago (id_estado_pago, nombre_estado) VALUES
 INSERT INTO tbl_estado_miembro (id_estado_miembro, nombre_estado) VALUES
 (1, 'Activo'), (2, 'Inactivo'), (3, 'Suspendido');
 
-INSERT INTO tbl_tipo_movimiento_stock (id_tipo_movimiento, nombre_tipo) VALUES
-(1, 'Venta'), (2, 'Producción'), (3, 'Devolución'), (4, 'Ajuste Manual'), (5, 'Merma');
-
 INSERT INTO tbl_usuario (id_usuario, nombre, apellido, email, contrasena, id_rol) VALUES
 (1, 'Admin', 'Sistema', 'admin@maishop.com', '$2y$10$cnwQTD8nHIx2Z1qIUrCaouWcDtyyoVkGzE4TNfXlrByIgLUSV5/0S', 1),
 (2, 'Juan', 'Pérez', 'vendedor@maishop.com', '$2y$10$mXYW56m2us6UIU/d7l36Supd193Puln2wsHbk8Jzqpbq.xb25L2lK', 2);
 
 INSERT INTO tbl_miembro (id_miembro, id_usuario, porcentaje_comision, universidad, telefono, estado, id_estado_miembro) 
-SELECT 1, id_usuario, 15.00, 'Universidad Central', '3001234567', 'activo', 1 FROM tbl_usuario WHERE email = 'vendedor@maishop.com';
+SELECT 1, id_usuario, 10.00, 'Universidad Central', '3001234567', 'activo', 1 FROM tbl_usuario WHERE email = 'vendedor@maishop.com';
 
-INSERT INTO tbl_producto (id_producto, nombre_producto, descripcion, precio, stock) VALUES
-(1, 'Torta de Chocolate', 'Deliciosa torta con ganache', 35000.00, 20),
-(2, 'Cupcakes de Fresa', 'Decorados con crema natural', 5000.00, 40);
-
+INSERT INTO tbl_producto (id_producto, nombre_producto, descripcion, precio) VALUES
+(1, 'Torta de Chocolate', 'Deliciosa torta con ganache', 35000.00),
+(2, 'Cupcakes de Fresa', 'Decorados con crema natural', 5000.00);
 
 -- 6. VISTAS
+
+CREATE OR REPLACE VIEW vw_vendedores_por_universidad AS
+SELECT 
+    u.nombre_universidad, 
+    COUNT(m.id_miembro) AS total_vendedores
+FROM tbl_universidad u
+LEFT JOIN tbl_miembro m ON m.id_universidad = u.id_universidad
+WHERE m.estado != 'eliminado'
+GROUP BY u.nombre_universidad
+ORDER BY total_vendedores DESC;
 
 CREATE OR REPLACE VIEW vw_totales_pedido AS
 SELECT 

@@ -69,7 +69,6 @@ $query = "
         nombre_producto as name,
         descripcion as short_description,
         precio as price,
-        stock,
         imagen_principal as main_image,
         estado
     FROM tbl_producto
@@ -212,9 +211,6 @@ $categories = []; // Placeholder si no hay tabla de categorías vinculada aún
                                         style="background: <?php echo $product['estado'] === 'activo' ? '#4CAF50' : '#F44336'; ?>;">
                                         <?php echo ucfirst($product['estado']); ?>
                                     </span>
-                                    <?php if ($product['stock'] <= 0): ?>
-                                        <span class="badge badge-out-of-stock">Agotado</span>
-                                    <?php endif; ?>
                                 </div>
                             </div>
 
@@ -245,9 +241,6 @@ $categories = []; // Placeholder si no hay tabla de categorías vinculada aún
                                 <!-- Price -->
                                 <div class="product-price">
                                     $ <?php echo number_format($product['price'], 0, ',', '.'); ?>
-                                    <span style="font-size: 0.8rem; color: var(--gray-500); margin-left: 0.5rem;">
-                                        (Stock: <?php echo $product['stock']; ?>)
-                                    </span>
                                 </div>
 
                                 <!-- Actions -->

@@ -6,6 +6,8 @@
 CREATE OR REPLACE FUNCTION fun_crear_vendedor(
     p_nombre VARCHAR,
     p_apellido VARCHAR,
+    p_tipo_documento VARCHAR,
+    p_numero_documento VARCHAR,
     p_email VARCHAR,
     p_contrasena_hash VARCHAR,
     p_telefono VARCHAR,
@@ -42,8 +44,8 @@ BEGIN
     VALUES (v_id_usuario, p_nombre, p_apellido, p_email, p_contrasena_hash, 2);
 
     -- 6. Insertar datos detallados en la tabla de miembros
-    INSERT INTO tbl_miembro (id_miembro, id_usuario, estado, telefono, id_estado_miembro, universidad, fecha_contratacion)
-    VALUES (v_id_miembro, v_id_usuario, p_estado, p_telefono, v_id_estado_miembro, p_universidad, CURRENT_DATE);
+    INSERT INTO tbl_miembro (id_miembro, id_usuario, tipo_documento, numero_documento, estado, telefono, id_estado_miembro, universidad, fecha_contratacion)
+    VALUES (v_id_miembro, v_id_usuario, p_tipo_documento, p_numero_documento, p_estado, p_telefono, v_id_estado_miembro, p_universidad, CURRENT_DATE);
 
     -- 7. Retornar éxito estructurado en formato JSON para PHP
     RETURN json_build_object('success', true, 'message', 'Vendedor creado exitosamente', 'id_miembro', v_id_miembro, 'id_usuario', v_id_usuario);
@@ -59,6 +61,8 @@ CREATE OR REPLACE FUNCTION fun_editar_vendedor(
     p_id_miembro INTEGER,
     p_nombre VARCHAR,
     p_apellido VARCHAR,
+    p_tipo_documento VARCHAR,
+    p_numero_documento VARCHAR,
     p_email VARCHAR,
     p_telefono VARCHAR,
     p_universidad VARCHAR,
@@ -100,7 +104,9 @@ BEGIN
 
     -- 6. Actualizar las condiciones de venta en tbl_miembro
     UPDATE tbl_miembro
-    SET estado = p_estado, 
+    SET tipo_documento = p_tipo_documento,
+        numero_documento = p_numero_documento,
+        estado = p_estado, 
         telefono = p_telefono, 
         universidad = p_universidad,
         id_estado_miembro = v_id_estado_miembro

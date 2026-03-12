@@ -54,16 +54,50 @@ function getTopProducts($pdo)
     return $pdo->query($sql)->fetchAll();
 }
 
+function getSalesByMonth($pdo)
+{
+    $sql = "
+        SELECT 
+            TO_CHAR(DATE_TRUNC('month', o.fecha_creacion), 'YYYY-MM') AS mes,
+            TO_CHAR(DATE_TRUNC('month', o.fecha_creacion), 'Mon YYYY') AS mes_label,
+            COALESCE(SUM(ot.total), 0) AS total_ventas
+        FROM tbl_pedido o
+        JOIN vw_totales_pedido ot ON o.id_pedido = ot.id_pedido
+        WHERE o.estado = 2
+        GROUP BY DATE_TRUNC('month', o.fecha_creacion)
+        ORDER BY DATE_TRUNC('month', o.fecha_creacion) ASC
+    ";
+    return $pdo->query($sql)->fetchAll();
+}
+
+function getSellersByUniversity($pdo)
+{
+    $sql = "
+        SELECT 
+            COALESCE(universidad, 'Sin especificar') AS universidad,
+            COUNT(*) AS total_vendedores
+        FROM tbl_miembro
+        WHERE estado != 'eliminado'
+        GROUP BY universidad
+        ORDER BY total_vendedores DESC
+    ";
+    return $pdo->query($sql)->fetchAll();
+}
+
 try {
     $stats = getSalesStats($pdo);
     $orders_status = getOrdersByStatus($pdo);
     $top_products = getTopProducts($pdo);
+    $sales_by_month = getSalesByMonth($pdo);
+    $sellers_by_uni = getSellersByUniversity($pdo);
 } catch (PDOException $e) {
     // En caso de error, arrays vacíos para no romper la UI
     $error = $e->getMessage();
     $stats = ['total_sales' => 0, 'total_orders' => 0, 'total_items' => 0];
     $orders_status = [];
     $top_products = [];
+    $sales_by_month = [];
+    $sellers_by_uni = [];
 }
 
 
@@ -187,7 +221,7 @@ foreach ($orders_status as $row) {
                 </div>
             </div>
 
-            <!-- Charts Grid -->
+            <!-- Charts Grid: Fila 1 -->
             <div class="charts-grid">
 
                 <!-- Status Chart -->
@@ -195,16 +229,42 @@ foreach ($orders_status as $row) {
                     <div class="chart-header">
                         <h3 class="chart-title">Estado de Pedidos</h3>
                     </div>
-                    <canvas id="statusChart"></canvas>
+                    <div style="height: 400px; position: relative;">
+                        <canvas id="statusChart" style="height: 400px;"></canvas>
+                    </div>
                 </div>
 
+                <!-- Ventas por Mes (Line Chart) -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Ventas por Mes</h3>
+                    </div>
+                    <div style="height: 400px; position: relative;">
+                        <canvas id="salesMonthChart" style="height: 400px;"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Charts Grid: Fila 2 -->
+            <div class="charts-grid" style="margin-top: 2rem;">
+
                 <!-- Top Products -->
-                <div class="chart-card" style="grid-column: 1 / -1;">
+                <div class="chart-card">
                     <div class="chart-header">
                         <h3 class="chart-title">Top 5 Productos Más Vendidos</h3>
                     </div>
-                    <canvas id="productsChart" height="100"></canvas>
+                    <canvas id="productsChart" height="160"></canvas>
                 </div>
+
+                <!-- Vendedores por Universidad -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Vendedores por Universidad</h3>
+                    </div>
+                    <canvas id="uniChart"></canvas>
+                </div>
+
             </div>
 
         </main>
@@ -231,6 +291,7 @@ foreach ($orders_status as $row) {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 cutout: '70%',
                 plugins: {
                     legend: { position: 'bottom' }
@@ -257,6 +318,63 @@ foreach ($orders_status as $row) {
                 plugins: {
                     legend: { display: false }
                 }
+            }
+        });
+
+        // 4. Ventas por Mes (Línea)
+        const salesMonthData = <?php echo json_encode($sales_by_month); ?>;
+        new Chart(document.getElementById('salesMonthChart'), {
+            type: 'line',
+            data: {
+                labels: salesMonthData.map(r => r.mes_label),
+                datasets: [{
+                    label: 'Ventas',
+                    data: salesMonthData.map(r => parseFloat(r.total_ventas)),
+                    borderColor: '#a65c68',
+                    backgroundColor: 'rgba(166, 92, 104, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#a65c68',
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: val => '$' + val.toLocaleString('es-CO')
+                        }
+                    }
+                }
+            }
+        });
+
+        // 5. Vendedores por Universidad (Barras)
+        const uniData = <?php echo json_encode($sellers_by_uni); ?>;
+        new Chart(document.getElementById('uniChart'), {
+            type: 'bar',
+            data: {
+                labels: uniData.map(r => r.universidad),
+                datasets: [{
+                    label: 'Vendedores',
+                    data: uniData.map(r => parseInt(r.total_vendedores)),
+                    backgroundColor: 'rgba(255, 107, 107, 0.75)',
+                    borderColor: 'rgba(255, 107, 107, 1)',
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                },
+                plugins: { legend: { display: false } }
             }
         });
     </script>

@@ -174,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php include __DIR__ . '/../includes/sidebar.php'; ?>
 
         <main class="main-content">
-            <div class="dashboard-header">
+            <div class="team-header">
                 <div class="header-left">
                     <a href="<?= BASE_URL ?>/Front/dashboard/comisiones/index.php" class="btn btn-secondary" style="margin-bottom: 1rem; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; background: #e2e8f0; color: #4a5568;">
                         <i class="fas fa-arrow-left"></i> Volver a Comisiones

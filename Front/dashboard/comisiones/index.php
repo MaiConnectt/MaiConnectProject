@@ -126,7 +126,7 @@ try {
 
         <!-- Main Content -->
         <main class="main-content">
-            <div class="dashboard-header">
+            <div class="team-header">
                 <div class="header-left">
                     <h1>Gestión de Comisiones</h1>
                     <p>Administra los pagos pendientes a tu equipo de ventas</p>
