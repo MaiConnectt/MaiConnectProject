@@ -20,7 +20,7 @@
         integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
         crossorigin="anonymous" referrerpolicy="no-referrer">
 
-    <link rel="stylesheet" href="Front/landing/style.css?v=2.6">
+    <link rel="stylesheet" href="styles/landing.css?v=2.6">
 </head>
 
 
@@ -29,7 +29,7 @@
     <nav class="navbar" id="navbar">
         <div class="nav-container">
             <div class="logo">
-                <img src="Front/img/mai.png" alt="Mai Shop" style="height: 50px; width: auto;">
+                <img src="src/img/mai.png" alt="Mai Shop" style="height: 50px; width: auto;">
             </div>
 
             <div class="nav-menu" id="navMenu">
@@ -39,7 +39,7 @@
                 <a href="#galeria" class="nav-link">Galería</a>
                 <a href="#contacto" class="nav-link">Contacto</a>
 
-                <a href="Front/login/login.php" class="nav-link" style="margin-left: 10px;">
+                <a href="src/Php/login/login.php" class="nav-link" style="margin-left: 10px;">
                     <i class="fas fa-user"></i> Iniciar Sesión
                 </a>
 
@@ -59,7 +59,7 @@
         <div class="hero-content">
             <h1 class="hero-title">
                 <span class="hero-subtitle">Bienvenido a</span>
-                <img src="Front/img/mai.png" alt="Mai Shop Logo" class="hero-logo-img">
+                <img src="src/img/mai.png" alt="Mai Shop Logo" class="hero-logo-img">
             </h1>
             <p class="hero-description">
                 Endulzamos tus momentos especiales con repostería artesanal de la más alta calidad
@@ -158,7 +158,7 @@
                     <div style="margin-top: 2rem; text-align: left;">
                         <p style="margin-bottom: 0.5rem; color: var(--gray-dark); font-weight: 500;">¿Eres universitario
                             y buscas ingresos extra?</p>
-                        <a href="Front/unete/unete.php" class="btn btn-primary">
+                        <a href="src/Php/unete/unete.php" class="btn btn-primary">
                             Sé parte del equipo <i class="fas fa-arrow-right" style="margin-left: 0.5rem;"></i>
                         </a>
                     </div>
@@ -464,7 +464,7 @@
             <div class="footer-content">
                 <div class="footer-brand">
                     <div class="logo">
-                        <img src="Front/img/mai.png" alt="Mai Shop"
+                        <img src="src/img/mai.png" alt="Mai Shop"
                             style="height: 50px; width: auto; filter: brightness(0) invert(1);">
                     </div>
                     <p>Endulzando momentos especiales desde 2019</p>
@@ -475,7 +475,7 @@
                     <a href="#inicio">Inicio</a>
                     <a href="#nosotros">Nosotros</a>
                     <a href="#productos">Productos</a>
-                    <a href="Front/unete/unete.php">Sé parte del equipo</a>
+                    <a href="src/Php/unete/unete.php">Sé parte del equipo</a>
                     <a href="#contacto">Contacto</a>
                 </div>
 
@@ -504,7 +504,7 @@
         <i class="fas fa-arrow-up"></i>
     </button>
 
-    <script src="Front/landing/script.js?v=2.7"></script>
+    <script src="src/JavaScript/landing.js?v=2.7"></script>
 </body>
 
 </html> <!-- Login Selection Modal -->
@@ -514,8 +514,8 @@
             <div class='cookie-bite'></div>
             <h2 class='modal-title'>MAI CONNECT</h2>
             <div class='modal-buttons'>
-                <a href='Front/login/login.php?role=admin' class='btn-modal'>Admi</a>
-                <a href='Front/login/login.php?role=team' class='btn-modal'>Equipo</a>
+                <a href='src/Php/login/login.php?role=admin' class='btn-modal'>Admi</a>
+                <a href='src/Php/login/login.php?role=team' class='btn-modal'>Equipo</a>
             </div>
         </div>
         <button class='modal-close' id='closeModal'>&times;</button>
