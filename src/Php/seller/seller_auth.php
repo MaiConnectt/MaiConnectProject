@@ -1,0 +1,62 @@
+<?php
+// Seller Authentication Middleware
+session_start();
+
+// Verificar que el usuario esté autenticado
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['role_id'])) {
+    // Cargar conexion para tener BASE_URL disponible
+    require_once __DIR__ . '/../config/conexion.php';
+    header('Location: ' . BASE_URL . '/src/Php/login/login.php');
+    exit;
+}
+
+// Verificar que el usuario sea un miembro del equipo (role_id = 2)
+if ($_SESSION['role_id'] != 2) {
+    // Si es admin u otro rol, redirigir al dashboard correspondiente
+    require_once __DIR__ . '/../config/conexion.php';
+    if ($_SESSION['role_id'] == 1) {
+        header('Location: ' . BASE_URL . '/src/Php/dashboard/dash.php');
+    } else {
+        header('Location: ' . BASE_URL . '/src/Php/login/login.php');
+    }
+    exit;
+}
+
+// Obtener información del vendedor
+require_once __DIR__ . '/../config/conexion.php';
+require_once __DIR__ . '/../config/helpers.php';
+
+try {
+    $stmt = $pdo->prepare("
+        SELECT 
+            m.id_miembro,
+            m.porcentaje_comision,
+            m.fecha_contratacion,
+            u.nombre,
+            u.apellido,
+            u.email
+        FROM tbl_miembro m
+        INNER JOIN tbl_usuario u ON m.id_usuario = u.id_usuario
+        WHERE u.id_usuario = ?
+    ");
+
+    $stmt->execute([$_SESSION['user_id']]);
+    $seller = $stmt->fetch();
+
+    if (!$seller) {
+        // El vendedor no existe
+        session_destroy();
+        header('Location: ' . BASE_URL . '/src/Php/login/login.php?error=no_seller');
+        exit;
+    }
+
+    // Guardar información del vendedor en la sesión
+    $_SESSION['seller_id'] = $seller['id_miembro'];
+    $_SESSION['seller_name'] = $seller['nombre'] . ' ' . $seller['apellido'];
+    $_SESSION['commission_percentage'] = $seller['porcentaje_comision'];
+
+} catch (PDOException $e) {
+    error_log("Error en seller_auth: " . $e->getMessage());
+    header('Location: ' . BASE_URL . '/src/Php/login/login.php?error=db');
+    exit;
+}
